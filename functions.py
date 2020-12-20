@@ -9,6 +9,9 @@ from pygame import Color, color
 import objects
 
 
+def load_image(path):
+    return pygame.image.load(path)
+
 def y_from_bottom(y):
     return Game('size_y') - y
 

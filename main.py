@@ -1,4 +1,3 @@
-from pygame import *
 import pygame
 
 from functions import *
