@@ -1,6 +1,4 @@
-from pygame import *
-import pygame
-
+from objects import *
 from functions import *
 
 
