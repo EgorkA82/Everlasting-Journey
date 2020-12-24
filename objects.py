@@ -4,6 +4,17 @@ import random
 import math
 import pygame
 
+from functions import *
+
+
+def load_image(path):
+    return pygame.image.load(path)
+
+def y_from_bottom(y):
+    return Game('size_y') - y
+
+def get_tile_num():
+    return math.ceil(Config('size_x') / Config('scale'))
 
 def load_image(path):
     return pygame.image.load(path)
@@ -11,6 +22,7 @@ def load_image(path):
 
 class Config:
     def __init__(self):
+
         self.text = '''{
                            "GAME_CAPTION": "Everlasting Journey",
 
@@ -29,6 +41,8 @@ class Config:
                 config.write(self.text)
             self.set_defaults()
 
+        self.tile_size = self('size_x') // self('scale')
+
     def __call__(self, parameter):
         return self.config[parameter]
 
@@ -38,19 +52,21 @@ class Config:
     def get(self):
         return self.config
 
+    def get_tile_size(self):
+        return self.tile_size
+
 
 class Game:
     def __init__(self, config=Config().get()):
         self.config = config
+        self.world = World()
 
     def config(self, pamameter):
         return self.config[pamameter]
 
     def display(self):
-        pass
-
-    def get_tile_size(self):
-        return math.ceil(self.config['size_x'] / self.config['scale'])
+        for tile in self.world.board:
+            Tile.all_tiles.draw()
 
 
 class Menu:
@@ -61,17 +77,16 @@ class Menu:
 class World:
     def __init__(self):
         self.time = datetime.datetime.now()
-        self.block_size = Game().get_tile_size()
-        self.game = Game()
+        self.tile_size = Config().get_tile_size()
         self.is_rainy = False
         self.board = self.create_board()
 
     def create_board(self):
         board = []
-        for row in range(0, self.game.config['size_x'] // self.game.config['chanks'] + 1):
+        for row in range(0, get_tile_num()):
             board.append([])
-            for tile in range(0, self.game.config['size_y'] // self.game.config['chanks'] + 1):
-                board[row] += [Tile('grass', (tile, row))]
+            for tile in range(0, get_tile_num() * Config('size_y') // Config('size_x')):
+                board[row] += [Tile('grass', (tile * Tile.absolute_size, row * Tile.absolute_size))]
         self.board = board
 
     def set_weather_rainy(self, rainy=True):
@@ -80,7 +95,7 @@ class World:
 
 class ActiveWindow:
     def __init__(self):
-        self.current_window = Menu()
+        self.current_window = Game()
 
     def show(self):
         self.current_window.display()
@@ -141,12 +156,16 @@ class Player:
 
 
 class Tile:
+    absolute_size = Config().get_tile_size()
+    all_tiles = pygame.sprite.Group()
+
     def __init__(self, name, pos, is_stackable=False, is_placed=True):
         self.name = name
         self.pos = pos
         self.weight = 1
         self.is_stackable = is_stackable
         self.is_placed = is_placed
+        self.all_tiles.add(self)
 
     def set_name(self, name):
         self.name = name
