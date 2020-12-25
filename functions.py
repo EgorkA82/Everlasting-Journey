@@ -47,16 +47,12 @@ class Game:
     def config(self, pamameter):
         return self.config[pamameter]
     
-    def display(self):
-        pass
+    def display(self, world):
+        for tile in world:
+            
     
     def get_tile_size(self):
         return math.ceil(self.config['size_x'] / self.config['scale'])
-
-
-class Menu:
-    def display(self):
-        pass
 
 
 class World:
@@ -72,7 +68,7 @@ class World:
         for row in range(0, self.game.config['size_x'] // self.game.config['chanks'] + 1):
             board.append([])
             for tile in range(0, self.game.config['size_y'] // self.game.config['chanks'] + 1):
-                board[row] += [Tile('grass', (tile, row))]
+                board[row] += [objects.Grass((tile, row))]
         self.board = board
     
     def set_weather_rainy(self, rainy=True):
