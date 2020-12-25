@@ -14,11 +14,18 @@ def y_from_bottom(y):
     return Game('size_y') - y
 
 def get_tile_num():
-    return math.ceil(Config('size_x') / Config('scale'))
+    cfg = Config()
+    return math.ceil(cfg('size_x') / cfg('scale'))
+
+def get_display_ratio():
+    cfg = Config()
+    return cfg('size_y') / cfg('size_x')
 
 def load_image(path):
     return pygame.image.load(path)
 
+def scale_image(image, size):
+    return pygame.transform.scale(image, size)
 
 class Config:
     def __init__(self):
@@ -44,6 +51,8 @@ class Config:
         self.tile_size = self('size_x') // self('scale')
 
     def __call__(self, parameter):
+        if parameter == 'scale':
+            return self.config['size_y'] // self.config[parameter]
         return self.config[parameter]
 
     def set_defaults(self):
@@ -64,13 +73,12 @@ class Game:
     def config(self, pamameter):
         return self.config[pamameter]
 
-    def display(self):
-        for tile in self.world.board:
-            Tile.all_tiles.draw()
+    def display(self, screen):
+        Objects.all_objects.draw(screen)
 
 
 class Menu:
-    def display(self):
+    def display(self, screen):
         pass
 
 
@@ -85,9 +93,9 @@ class World:
         board = []
         for row in range(0, get_tile_num()):
             board.append([])
-            for tile in range(0, get_tile_num() * Config('size_y') // Config('size_x')):
-                board[row] += [Tile('grass', (tile * Tile.absolute_size, row * Tile.absolute_size))]
-        self.board = board
+            for tile in range(0, int(get_tile_num() * get_display_ratio())):
+                board[row] += [Grass((tile * Tile.absolute_size, row * Tile.absolute_size))]
+        return board
 
     def set_weather_rainy(self, rainy=True):
         self.is_rainy = rainy
@@ -97,8 +105,8 @@ class ActiveWindow:
     def __init__(self):
         self.current_window = Game()
 
-    def show(self):
-        self.current_window.display()
+    def show(self, screen):
+        self.current_window.display(screen)
 
     def set(self, window):
         self.current_window = window
@@ -155,6 +163,10 @@ class Player:
         return int(self.default_velocity * (1 / self.get_total_weight()))
 
 
+class Objects:
+    all_objects = pygame.sprite.Group()
+
+
 class Tile:
     absolute_size = Config().get_tile_size()
     all_tiles = pygame.sprite.Group()
@@ -166,6 +178,7 @@ class Tile:
         self.is_stackable = is_stackable
         self.is_placed = is_placed
         self.all_tiles.add(self)
+        Objects.all_objects.add(self)
 
     def set_name(self, name):
         self.name = name
@@ -209,15 +222,21 @@ class EventReaction:
             self.running = False
 
 
-class Grass(pygame.sprite.Sprite):
-    image = load_image("sprites/objects/tiles/grass.jpg")
+class Grass(pygame.sprite.Sprite, Tile):
+    image = scale_image(load_image("sprites/objects/tiles/grass.jpg"), (Config.get_tile_size(Config()), Config.get_tile_size(Config())))
     all_sprites = pygame.sprite.Group()
     
-    def __init__(self, name, pos, is_stackable, is_placed, group=all_sprites):
-        super().__init__(*group)
+    def __init__(self, pos, is_stackable=False, is_placed=True, group=all_sprites):
+        pygame.sprite.Sprite.__init__(self, *group)
+        Tile.__init__(self, name=__class__.__name__, pos=pos, is_stackable=is_stackable, is_placed=is_placed)
         self.image = Grass.image
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = pos
-        Tile.__init__(__class__.__name__, pos, is_stackable=is_stackable, is_placed=is_placed)
+        
+    def __str__(self):
+        return super().__str__()
+    
+    def __repr__(self):
+        return super().__repr__()
 
 

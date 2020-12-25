@@ -1,3 +1,5 @@
+import pygame
+
 from objects import *
 from functions import *
 
@@ -18,7 +20,7 @@ running = True
 while event_reaction.running:
     event_reaction.react(pygame.event.get())
     
-    active_window.show()
+    active_window.show(screen)
     
     pygame.display.flip()
 pygame.quit()
