@@ -27,9 +27,9 @@ def load_image(path):
 def scale_image(image, size):
     return pygame.transform.scale(image, size)
 
+
 class Config:
     def __init__(self):
-
         self.text = '''{
                            "GAME_CAPTION": "Everlasting Journey",
 
@@ -65,21 +65,22 @@ class Config:
         return self.tile_size
 
 
+class Menu:
+    def display(self, screen):
+        pass
+
+
 class Game:
     def __init__(self, config=Config().get()):
         self.config = config
         self.world = World()
+        self.camera = Camera()
 
     def config(self, pamameter):
         return self.config[pamameter]
 
     def display(self, screen):
-        Objects.all_objects.draw(screen)
-
-
-class Menu:
-    def display(self, screen):
-        pass
+        self.camera.all_sprites.draw(screen)
 
 
 class World:
@@ -94,7 +95,7 @@ class World:
         for row in range(0, get_tile_num()):
             board.append([])
             for tile in range(0, int(get_tile_num() * get_display_ratio())):
-                board[row] += [Grass((tile * Tile.absolute_size, row * Tile.absolute_size))]
+                board[row] += [Grass((tile * Tiles.absolute_size, row * Tiles.absolute_size))]
         return board
 
     def set_weather_rainy(self, rainy=True):
@@ -167,7 +168,7 @@ class Objects:
     all_objects = pygame.sprite.Group()
 
 
-class Tile:
+class Tiles:
     absolute_size = Config().get_tile_size()
     all_tiles = pygame.sprite.Group()
 
@@ -222,13 +223,13 @@ class EventReaction:
             self.running = False
 
 
-class Grass(pygame.sprite.Sprite, Tile):
+class Grass(pygame.sprite.Sprite, Tiles):
     image = scale_image(load_image("sprites/objects/tiles/grass.jpg"), (Config.get_tile_size(Config()), Config.get_tile_size(Config())))
     all_sprites = pygame.sprite.Group()
     
     def __init__(self, pos, is_stackable=False, is_placed=True, group=all_sprites):
         pygame.sprite.Sprite.__init__(self, *group)
-        Tile.__init__(self, name=__class__.__name__, pos=pos, is_stackable=is_stackable, is_placed=is_placed)
+        Tiles.__init__(self, name=__class__.__name__, pos=pos, is_stackable=is_stackable, is_placed=is_placed)
         self.image = Grass.image
         self.rect = self.image.get_rect()
         self.rect.x, self.rect.y = pos
@@ -240,3 +241,22 @@ class Grass(pygame.sprite.Sprite, Tile):
         return super().__repr__()
 
 
+class UI:
+    pass
+    
+
+class Camera:
+    def __init__(self):
+        self.all_sprites = pygame.sprite.Group()
+        objects = Objects()
+        tiles = Tiles()
+        
+        self.all_sprites.add(objects.all_objects, tiles.all_tiles)
+        
+
+    def update(self):
+        self.all_sprites.update()
+
+    
+    def draw(self):
+        self.all_sprites.draw()
