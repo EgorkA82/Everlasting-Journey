@@ -70,13 +70,17 @@ class Menu:
 
 
 class Game:
-    def __init__(self, config=Config().get()):
+    def __init__(self, config=Config()):
         self.config = config
         self.world = World()
         self.camera = Camera(self)
+        self.player = Player("Player", self.center(), self)
 
     def config(self, pamameter):
         return self.config[pamameter]
+    
+    def center(self):
+        return (self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2)
 
     def display(self, screen):
         # self.camera.move((-10, -10))
@@ -139,8 +143,11 @@ class NPC:
             self.health = self.max_health
 
 
-class Player:
-    def __init__(self, player_name, pos, inventory=Inventory(), health=100, height=5, weight=50):
+class Player(pygame.sprite.Sprite):
+    player_sprite = pygame.sprite.Group()
+    
+    def __init__(self, player_name, pos, game, inventory=Inventory(), health=100, height=5, weight=50):
+        super().__init__(self.player_sprite)
         self.name = player_name
         self.pos = pos
         self.health = health
@@ -149,6 +156,12 @@ class Player:
         self.inventory = inventory
         self.default_velocity = 100
         self.velocity = self.get_velocity()
+        
+        self.image = scale_image(load_image("sprites\\objects\\npc\\Male\\Male 01-1.png"), (game.config.get_tile_size(), game.config.get_tile_size()))
+        self.rect = self.image.get_rect()
+        
+        self.rect.x = (game.config.get()['size_x'] - self.rect.w) / 2
+        self.rect.y = (game.config.get()['size_y'] - self.rect.h) / 2
 
     def set_pos(self, pos):
         self.pos = pos
@@ -158,6 +171,9 @@ class Player:
 
     def get_velocity(self):
         return int(self.default_velocity * (1 / self.get_total_weight()))
+    
+    def move(self):
+        pass
 
 
 class Objects:
@@ -180,9 +196,8 @@ class Tiles(pygame.sprite.Sprite):
         
     def update(self, camera_pos): # отступ от края с учетом позиции камеры
         self.rect.x = camera_pos[0] + self.board_pos[0] * self.absolute_size
-        self.rect.y = camera_pos[1] + self.board_pos[0] * self.absolute_size
+        self.rect.y = camera_pos[1] + self.board_pos[1] * self.absolute_size
         self.pos = [self.rect.x, self.rect.y]
-        print(self, self.rect)
 
     def set_name(self, name):
         self.name = name
@@ -218,15 +233,20 @@ class EventReaction:
         self.running = True
         self.iteration = 0
 
-    def react(self, events, game):
+    def react(self, events):
         self.iteration += 1
+        
+        if self.iteration % 200 == 0:
+            self.increase_time(self.game)
         
         for event in events:
             if self.check_quit(event): return
-        
-        if self.iteration % 200 == 0:
-            self.increase_time(game)
+            elif self.player_move(event): return
 
+    def player_move(self, event):
+        if event.type == pygame.KEYDOWN:
+            pass
+                
     def check_quit(self, event):
         if event.type == pygame.QUIT:
             self.running = False
@@ -266,17 +286,18 @@ class Camera:
         self.all_sprites = pygame.sprite.Group()
         objects = Objects
         tiles = Tiles
-        self.all_sprites.add(objects.all_objects, tiles.all_tiles)
+        player = Player
+        self.all_sprites.add(objects.all_objects, tiles.all_tiles, player.player_sprite)
         self.center()
     
     def center(self):
-        self.pos = [(self.cfg('size_x') - (len(self.game.world.board[0]) / 2) * self.cfg.get_tile_size()) / 2,
-                    (self.cfg('size_y') - (len(self.game.world.board) / 2) * self.cfg.get_tile_size()) / 2
+        self.pos = [(self.cfg('size_x') - (len(self.game.world.board[0])) * self.cfg.get_tile_size()) / 2,
+                    (self.cfg('size_y') - (len(self.game.world.board)) * self.cfg.get_tile_size()) / 2
                     ] # camera's centering
         
         print(f"Camera's pos: {self.pos}")
-        print(f"Board's width: {(len(self.game.world.board[0]) / 2) * self.cfg.get_tile_size() / 2}")
-        print(f"Board's height: {(len(self.game.world.board) / 2) * self.cfg.get_tile_size() / 2}")
+        print(f"Board's width: {(len(self.game.world.board[0])) * self.cfg.get_tile_size() / 2}")
+        print(f"Board's height: {(len(self.game.world.board)) * self.cfg.get_tile_size() / 2}")
         self.update(self.pos)
     
     def update(self, pos):
