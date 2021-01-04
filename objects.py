@@ -2,6 +2,7 @@ import datetime
 import json
 import random
 import math
+import sys
 import pygame
 
 from functions import *
@@ -10,16 +11,13 @@ from functions import *
 def load_image(path):
     return pygame.image.load(path)
 
-def y_from_bottom(y):
-    return Game('size_y') - y
-
 def get_tile_num():
     cfg = Config()
     return math.ceil(cfg('size_x') / cfg('scale'))
 
 def get_display_ratio():
     cfg = Config()
-    return cfg('size_y') / cfg('size_x')
+    return math.ceil(cfg('size_y') / cfg('size_x'))
 
 def load_image(path):
     return pygame.image.load(path)
@@ -31,14 +29,15 @@ def scale_image(image, size):
 class Config:
     def __init__(self):
         self.text = '''{
-                           "GAME_CAPTION": "Everlasting Journey",
+    "GAME_CAPTION": "[Alpha] Everlasting Journey",
 
-                           "size_x": 1280,
-                           "size_y": 720,
-                           "fullscreen": false,
+    "size_x": 1280,
+    "size_y": 720,
+    "fullscreen": false,
 
-                           "scale": 50
-                       }'''
+    "scale": 50,
+    "framerate": 60
+} '''
         self.defaults = json.loads(self.text)
         try:
             with open("config.json", "r", encoding="utf-8") as config:
@@ -74,37 +73,34 @@ class Game:
     def __init__(self, config=Config().get()):
         self.config = config
         self.world = World()
-        self.camera = Camera()
+        self.camera = Camera(self)
 
     def config(self, pamameter):
         return self.config[pamameter]
 
     def display(self, screen):
-        self.camera.all_sprites.draw(screen)
+        # self.camera.move((-10, -10))
+        self.camera.draw(screen)
 
 
 class World:
     def __init__(self):
         self.time = datetime.datetime.now()
         self.tile_size = Config().get_tile_size()
-        self.is_rainy = False
         self.board = self.create_board()
 
     def create_board(self):
         board = []
-        for row in range(0, get_tile_num()):
+        for row in range(0, get_tile_num() * get_display_ratio()): # y
             board.append([])
-            for tile in range(0, int(get_tile_num() * get_display_ratio())):
-                board[row] += [Grass((tile * Tiles.absolute_size, row * Tiles.absolute_size))]
+            for tile in range(0, get_tile_num()): # x
+                board[row] += [Grass((tile, row))]
         return board
-
-    def set_weather_rainy(self, rainy=True):
-        self.is_rainy = rainy
 
 
 class ActiveWindow:
-    def __init__(self):
-        self.current_window = Game()
+    def __init__(self, window):
+        self.current_window = window
 
     def show(self, screen):
         self.current_window.display(screen)
@@ -154,8 +150,8 @@ class Player:
         self.default_velocity = 100
         self.velocity = self.get_velocity()
 
-    def set_pos(self, x, y):
-        self.pos = (x, y_from_bottom(y))
+    def set_pos(self, pos):
+        self.pos = pos
 
     def get_total_weight(self):
         return self.weight + self.inventory.get_weight()
@@ -168,18 +164,25 @@ class Objects:
     all_objects = pygame.sprite.Group()
 
 
-class Tiles:
+class Tiles(pygame.sprite.Sprite):
     absolute_size = Config().get_tile_size()
     all_tiles = pygame.sprite.Group()
 
-    def __init__(self, name, pos, is_stackable=False, is_placed=True):
+    def __init__(self, name, board_pos, is_stackable=False, is_placed=True):
+        super().__init__(Tiles.all_tiles)
         self.name = name
-        self.pos = pos
         self.weight = 1
         self.is_stackable = is_stackable
         self.is_placed = is_placed
-        self.all_tiles.add(self)
-        Objects.all_objects.add(self)
+        self.rect = self.image.get_rect()
+        self.board_pos = board_pos
+        self.pos = [board_pos[0] * self.absolute_size, board_pos[1] * self.absolute_size]
+        
+    def update(self, camera_pos):
+        self.rect.x = camera_pos[0] + self.board_pos[0] * self.absolute_size
+        self.rect.y = camera_pos[1] + self.board_pos[0] * self.absolute_size
+        self.pos = [self.rect.x, self.rect.y]
+        print(self, self.rect)
 
     def set_name(self, name):
         self.name = name
@@ -213,26 +216,36 @@ class Quest:
 class EventReaction:
     def __init__(self):
         self.running = True
+        self.iteration = 0
 
-    def react(self, events):
+    def react(self, events, game):
+        self.iteration += 1
+        
         for event in events:
-            self.check_quit(event)
+            if self.check_quit(event): return
+        
+        if self.iteration % 200 == 0:
+            self.increase_time(game)
 
     def check_quit(self, event):
         if event.type == pygame.QUIT:
             self.running = False
-
-
-class Grass(pygame.sprite.Sprite, Tiles):
-    image = scale_image(load_image("sprites/objects/tiles/grass.jpg"), (Config.get_tile_size(Config()), Config.get_tile_size(Config())))
-    all_sprites = pygame.sprite.Group()
+            return True
+        return False
     
-    def __init__(self, pos, is_stackable=False, is_placed=True, group=all_sprites):
-        pygame.sprite.Sprite.__init__(self, *group)
-        Tiles.__init__(self, name=__class__.__name__, pos=pos, is_stackable=is_stackable, is_placed=is_placed)
-        self.image = Grass.image
+    def increase_time(self, game):
+        game.world.time += datetime.timedelta(minutes=1)
+
+
+class Grass(Tiles):
+    cfg = Config()
+    image = scale_image(load_image("sprites/objects/tiles/grass.jpg"), (cfg.get_tile_size(), cfg.get_tile_size()))
+    
+    def __init__(self, board_pos, is_stackable=False, is_placed=True):
+        super().__init__(self, board_pos, is_stackable, is_placed)
+        Tiles.__init__(self, name=__class__.__name__, board_pos=board_pos, is_stackable=is_stackable, is_placed=is_placed)
         self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = pos
+        self.rect.x, self.rect.y = self.pos
         
     def __str__(self):
         return super().__str__()
@@ -246,17 +259,36 @@ class UI:
     
 
 class Camera:
-    def __init__(self):
-        self.all_sprites = pygame.sprite.Group()
-        objects = Objects()
-        tiles = Tiles()
-        
-        self.all_sprites.add(objects.all_objects, tiles.all_tiles)
-        
-
-    def update(self):
-        self.all_sprites.update()
-
+    cfg = Config()
     
-    def draw(self):
-        self.all_sprites.draw()
+    def __init__(self, game):
+        self.game = game
+        self.all_sprites = pygame.sprite.Group()
+        objects = Objects
+        tiles = Tiles
+        self.all_sprites.add(objects.all_objects, tiles.all_tiles)
+        self.center()
+    
+    def center(self):
+        self.pos = [(self.cfg('size_x') - (len(self.game.world.board[0]) / 2) * self.cfg.get_tile_size()) / 2,
+                    (self.cfg('size_y') - (len(self.game.world.board) / 2) * self.cfg.get_tile_size()) / 2
+                    ] # camera's centering
+        
+        print(f"Camera's pos: {self.pos}")
+        print(f"Board's width: {(len(self.game.world.board[0]) / 2) * self.cfg.get_tile_size() / 2}")
+        print(f"Board's height: {(len(self.game.world.board) / 2) * self.cfg.get_tile_size() / 2}")
+        self.update(self.pos)
+    
+    def update(self, pos):
+        self.all_sprites.update(pos)
+            
+    def set(self, pos):
+        self.pos[0] = pos[0]
+        self.pos[1] = pos[1]
+        self.update(pos)
+
+    def move(self, offset):
+        self.update((self.pos[0] + offset[0], self.pos[1] + offset[1]))
+        
+    def draw(self, screen):
+        self.all_sprites.draw(screen)
