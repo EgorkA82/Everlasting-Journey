@@ -4,6 +4,7 @@ import random
 import math
 import sys
 from time import time
+from turtle import width
 import pygame
 
 from functions import *
@@ -28,7 +29,9 @@ def scale_image(image, size):
 
 def timescale(value, default_framerate=60):
     return value * (default_framerate / Game.framerate)
-    
+
+def timescale_int(value, default_framerate=60):
+    return int(timescale(value, default_framerate))
 
 
 class Config:
@@ -79,8 +82,8 @@ class Game:
     
     def __init__(self, config=Config()):
         self.config = config
-        self.world = World()
-        self.player = Player("Player", self.center(), self)
+        self.world = World(self)
+        self.player = Player("Player", self)
         self.camera = Camera(self)
         
 
@@ -91,11 +94,13 @@ class Game:
         return (self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2)
 
     def display(self, screen):
+        self.player.move((-10, 0))
         self.camera.draw(screen)
 
 
 class World:
-    def __init__(self):
+    def __init__(self, game):
+        self.game = game
         self.time = datetime.datetime.now()
         self.tile_size = Config().get_tile_size()
         self.board = self.create_board()
@@ -107,6 +112,15 @@ class World:
             for tile in range(0, get_tile_num()): # x
                 board[row] += [Grass([tile, row])]
         return board
+    
+    def width(self):
+        return (len(self.board[0])) * self.game.config.get_tile_size()
+    
+    def height(self):
+        return (len(self.board)) * self.game.config.get_tile_size()
+    
+    def center(self): # от начала карты
+        return ((super().config.get()['size_x'] - self.width()) / 2, (super().config.get()['size_y'] - self.height()) / 2)
 
 
 class ActiveWindow:
@@ -121,7 +135,7 @@ class ActiveWindow:
 
 
 class Inventory:
-    def __init__(self, size=[[0] * 6] * 4):
+    def __init__(self, size=[[0] * 10]):
         self.size = size
 
     def get_weight(self):
@@ -150,22 +164,6 @@ class NPC:
             self.health = self.max_health
 
 
-class Quest:
-    def __init__(self, text, requester, condition, completed_text):
-        self.text = text
-        self.requester = requester
-        self.condition = condition
-        self.completed_text = completed_text
-        self.completed = False
-
-    def check_for_completed(self):
-        if eval(self.condition):
-            self.set_completed()
-
-    def set_completed(self):
-        self.completed = True
-
-
 class EventReaction:
     def __init__(self, game):
         self.running = True
@@ -175,7 +173,7 @@ class EventReaction:
     def react(self, events):
         self.iteration += 1
         
-        if self.iteration % 200 == 0:
+        if self.iteration % timescale_int(200) == 0:
             self.increase_time()
         
         for event in events:
@@ -196,40 +194,63 @@ class EventReaction:
         self.game.world.time += datetime.timedelta(minutes=1)
 
 
+class AnimatedSprite:
+    def cut_sheet(sheet, columns, rows):
+        frames = []
+        rect = pygame.Rect(0, 0, sheet.get_width() // columns, 
+                                sheet.get_height() // rows)
+        for j in range(rows):
+            for i in range(columns):
+                frame_location = (rect.w * i, rect.h * j)
+                frames.append(sheet.subsurface(pygame.Rect(
+                    frame_location, rect.size)))
+        return frames
+
+
 class Player(pygame.sprite.Sprite):
     cfg = Config()
-    image = scale_image(load_image("sprites\\objects\\npc\\male.png"), (cfg.get_tile_size(), cfg.get_tile_size()))
+    
     player_sprite = pygame.sprite.Group()
     
-    def __init__(self, player_name, pos, game, inventory=Inventory(), health=100, weight=50):
+    def __init__(self, player_name, game, inventory=Inventory(), health=100, weight=50):
+        self.size_per_tile = 0.9
         super().__init__(self.player_sprite)
+        self.frames = AnimatedSprite.cut_sheet(
+            (scale_image(load_image("sprites\\objects\\npc\\male.png"), (
+                int(self.cfg.get_tile_size() * 3 * self.size_per_tile),
+                int(self.cfg.get_tile_size() * 4 * self.size_per_tile)
+                ))),
+            3, 4)
+        self.image = self.frames[1]
         self.rect = self.image.get_rect()
         self.rect.center = game.center()
+        self.pos = [self.rect.center[0] - self.rect.w, self.rect.center[1] - self.rect.h]
         self.name = player_name
-        self.pos = pos
+        self.game= game
         self.health = health
         self.weight = weight
         self.inventory = inventory
         self.default_velocity = 100
         self.velocity = self.get_velocity()
 
-    def update(self, camera_pos): # отступ от края с учетом позиции камеры
-        self.rect.x = camera_pos[0] + self.pos[0]
-        self.rect.y = camera_pos[1] + self.pos[1]
+    def center(self, camera_pos): # отступ от края с учетом позиции камеры
+        self.rect.centerx = camera_pos[0] + self.game.world.width() / 2
+        self.rect.centery = camera_pos[1] + self.game.world.height() / 2
         self.pos = [self.rect.x, self.rect.y]
     
     def set_pos(self, pos):
         self.pos = pos
 
+    def move(self, offset):
+        self.pos[0] += offset[0]
+        self.pos[1] += offset[1]
+    
     def get_total_weight(self):
         return self.weight + self.inventory.get_weight()
 
     def get_velocity(self):
         return max(self.default_velocity * 0.2, 
                    int(self.default_velocity - (0.5 * self.get_total_weight())))
-    
-    def move(self):
-        pass
 
     def __str__(self):
         return f"player_{self.name}: ({self.pos[0]}, {self.pos[1]})"
@@ -308,8 +329,8 @@ class Camera:
                     ] # camera's centering
         
         print(f"Camera's pos: {self.pos}")
-        print(f"Board's width: {(len(self.game.world.board[0])) * self.cfg.get_tile_size() / 2}")
-        print(f"Board's height: {(len(self.game.world.board)) * self.cfg.get_tile_size() / 2}")
+        print(f"Board's width: {(len(self.game.world.board[0])) * self.cfg.get_tile_size()}")
+        print(f"Board's height: {(len(self.game.world.board)) * self.cfg.get_tile_size()}")
         self.update(self.pos)
     
     def update(self, pos):
