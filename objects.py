@@ -19,11 +19,15 @@ def get_display_ratio():
     cfg = Config()
     return math.ceil(cfg('size_y') / cfg('size_x'))
 
-def load_image(path):
-    return pygame.image.load(path)
+def load_image(path, **kwargs):
+    return pygame.image.load(path, *kwargs)
 
 def scale_image(image, size):
     return pygame.transform.scale(image, size)
+
+def timescale(value, current_framerate, default_framerate=60):
+    return value * (default_framerate / current_framerate)
+    
 
 
 class Config:
@@ -75,6 +79,7 @@ class Game:
         self.world = World()
         self.camera = Camera(self)
         self.player = Player("Player", self.center(), self)
+        self.framerate = self.config.get()["framerate"]
 
     def config(self, pamameter):
         return self.config[pamameter]
@@ -83,7 +88,7 @@ class Game:
         return (self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2)
 
     def display(self, screen):
-        # self.camera.move((-10, -10))
+        self.camera.move((0, timescale(-5, self.framerate)))
         self.camera.draw(screen)
 
 
@@ -143,11 +148,63 @@ class NPC:
             self.health = self.max_health
 
 
+class Quest:
+    def __init__(self, text, requester, condition, completed_text):
+        self.text = text
+        self.requester = requester
+        self.condition = condition
+        self.completed_text = completed_text
+        self.completed = False
+
+    def check_for_completed(self):
+        if eval(self.condition):
+            self.set_completed()
+
+    def set_completed(self):
+        self.completed = True
+
+
+class EventReaction:
+    def __init__(self, game):
+        self.running = True
+        self.iteration = 0
+        self.game = game
+
+    def react(self, events):
+        self.iteration += 1
+        
+        if self.iteration % 200 == 0:
+            self.increase_time()
+        
+        for event in events:
+            if self.check_quit(event): return
+            elif self.player_move(event): return
+
+    def player_move(self, event):
+        if event.type == pygame.KEYDOWN:
+            pass
+                
+    def check_quit(self, event):
+        if event.type == pygame.QUIT:
+            self.running = False
+            return True
+        return False
+    
+    def increase_time(self):
+        self.game.world.time += datetime.timedelta(minutes=1)
+
+
 class Player(pygame.sprite.Sprite):
     player_sprite = pygame.sprite.Group()
     
     def __init__(self, player_name, pos, game, inventory=Inventory(), health=100, height=5, weight=50):
         super().__init__(self.player_sprite)
+        
+        self.image = scale_image(load_image("sprites/objects/npc/Male/Male 01-1.png"), (game.config.get_tile_size(), game.config.get_tile_size()))
+        self.rect = self.image.get_rect()
+        self.rect.x = (game.config.get()['size_x'] - self.rect.w) / 2
+        self.rect.y = (game.config.get()['size_y'] - self.rect.h) / 2
+        
         self.name = player_name
         self.pos = pos
         self.health = health
@@ -156,13 +213,12 @@ class Player(pygame.sprite.Sprite):
         self.inventory = inventory
         self.default_velocity = 100
         self.velocity = self.get_velocity()
-        
-        self.image = scale_image(load_image("sprites\\objects\\npc\\Male\\Male 01-1.png"), (game.config.get_tile_size(), game.config.get_tile_size()))
-        self.rect = self.image.get_rect()
-        
-        self.rect.x = (game.config.get()['size_x'] - self.rect.w) / 2
-        self.rect.y = (game.config.get()['size_y'] - self.rect.h) / 2
 
+    def update(self, camera_pos): # отступ от края с учетом позиции камеры
+        self.rect.x = camera_pos[0] + self.board_pos[0] * Tiles.absolute_size
+        self.rect.y = camera_pos[1] + self.board_pos[1] * Tiles.absolute_size
+        self.pos = [self.rect.x, self.rect.y]
+    
     def set_pos(self, pos):
         self.pos = pos
 
@@ -170,7 +226,8 @@ class Player(pygame.sprite.Sprite):
         return self.weight + self.inventory.get_weight()
 
     def get_velocity(self):
-        return int(self.default_velocity * (1 / self.get_total_weight()))
+        return max(self.default_velocity * 0.2, 
+                   int(self.default_velocity - (0.5 * self.get_total_weight())))
     
     def move(self):
         pass
@@ -185,7 +242,7 @@ class Tiles(pygame.sprite.Sprite):
     all_tiles = pygame.sprite.Group()
 
     def __init__(self, name, board_pos, is_stackable=False, is_placed=True):
-        super().__init__(Tiles.all_tiles)
+        super().__init__(self.all_tiles)
         self.name = name
         self.weight = 1
         self.is_stackable = is_stackable
@@ -212,60 +269,12 @@ class Tiles(pygame.sprite.Sprite):
         return self.__str__()
 
 
-class Quest:
-    def __init__(self, text, requester, condition, completed_text):
-        self.text = text
-        self.requester = requester
-        self.condition = condition
-        self.completed_text = completed_text
-        self.completed = False
-
-    def check_for_completed(self):
-        if eval(self.condition):
-            self.set_completed()
-
-    def set_completed(self):
-        self.completed = True
-
-
-class EventReaction:
-    def __init__(self):
-        self.running = True
-        self.iteration = 0
-
-    def react(self, events):
-        self.iteration += 1
-        
-        if self.iteration % 200 == 0:
-            self.increase_time(self.game)
-        
-        for event in events:
-            if self.check_quit(event): return
-            elif self.player_move(event): return
-
-    def player_move(self, event):
-        if event.type == pygame.KEYDOWN:
-            pass
-                
-    def check_quit(self, event):
-        if event.type == pygame.QUIT:
-            self.running = False
-            return True
-        return False
-    
-    def increase_time(self, game):
-        game.world.time += datetime.timedelta(minutes=1)
-
-
 class Grass(Tiles):
     cfg = Config()
     image = scale_image(load_image("sprites/objects/tiles/grass.jpg"), (cfg.get_tile_size(), cfg.get_tile_size()))
     
     def __init__(self, board_pos, is_stackable=False, is_placed=True):
-        super().__init__(self, board_pos, is_stackable, is_placed)
-        Tiles.__init__(self, name=__class__.__name__, board_pos=board_pos, is_stackable=is_stackable, is_placed=is_placed)
-        self.rect = self.image.get_rect()
-        self.rect.x, self.rect.y = self.pos
+        super().__init__(__class__.__name__, board_pos, is_stackable, is_placed)
         
     def __str__(self):
         return super().__str__()
@@ -284,10 +293,7 @@ class Camera:
     def __init__(self, game):
         self.game = game
         self.all_sprites = pygame.sprite.Group()
-        objects = Objects
-        tiles = Tiles
-        player = Player
-        self.all_sprites.add(objects.all_objects, tiles.all_tiles, player.player_sprite)
+        self.all_sprites.add(Player.player_sprite, Objects.all_objects, Tiles.all_tiles)
         self.center()
     
     def center(self):
@@ -309,6 +315,8 @@ class Camera:
         self.update(pos)
 
     def move(self, offset):
+        self.pos[0] += offset[0]
+        self.pos[1] += offset[1]
         self.update((self.pos[0] + offset[0], self.pos[1] + offset[1]))
         
     def draw(self, screen):

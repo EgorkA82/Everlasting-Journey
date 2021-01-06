@@ -14,7 +14,7 @@ screen = pygame.display.set_mode((config.get()['size_x'], config.get()['size_y']
 if config.get()['fullscreen']:
     pygame.display.toggle_fullscreen()
 
-event_reaction = EventReaction()
+event_reaction = EventReaction(game)
 active_window = ActiveWindow(game)
 running = True
 
