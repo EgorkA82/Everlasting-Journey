@@ -1,10 +1,7 @@
 import datetime
 import json
-import random
 import math
-import sys
-from time import time
-from turtle import width
+from random import randint
 import pygame
 
 from functions import *
@@ -33,6 +30,8 @@ def timescale(value, default_framerate=60):
 def timescale_int(value, default_framerate=60):
     return int(timescale(value, default_framerate))
 
+def sizescale(value, default_scale = 48):
+    return value * (default_scale / Game.scale)
 
 class Config:
     def __init__(self):
@@ -78,23 +77,28 @@ class Menu:
 
 
 class Game:
-    framerate = Config().get()["framerate"]
+    config = Config()
+    framerate = config.get()["framerate"]
+    scale = config.get()["scale"]
     
-    def __init__(self, config=Config()):
-        self.config = config
+    def __init__(self):
         self.world = World(self)
         self.player = Player("Player", self)
         self.camera = Camera(self)
         
-
-    def config(self, pamameter):
-        return self.config[pamameter]
+        #=======================================================!^^^
+        self.iteration = 0
+        self.vx, self.vy = randint(-10, -10), randint(-10, -10)
     
     def center(self):
         return (self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2)
 
     def display(self, screen):
-        self.player.move((-10, 0))
+        self.iteration += 1
+        self.player.move((self.vx, self.vy))
+        if self.iteration % timescale_int(10) == 0:
+            self.vx, self.vy = randint(-10, 10), randint(-10, 10)
+        #========================================================^^^
         self.camera.draw(screen)
 
 
@@ -209,24 +213,24 @@ class AnimatedSprite:
 
 class Player(pygame.sprite.Sprite):
     cfg = Config()
-    
     player_sprite = pygame.sprite.Group()
     
     def __init__(self, player_name, game, inventory=Inventory(), health=100, weight=50):
         self.size_per_tile = 0.9
         super().__init__(self.player_sprite)
         self.frames = AnimatedSprite.cut_sheet(
-            (scale_image(load_image("sprites\\objects\\npc\\male.png"), (
+            (scale_image(load_image("sprites\\objects\\npc\\female.png"), (
                 int(self.cfg.get_tile_size() * 3 * self.size_per_tile),
                 int(self.cfg.get_tile_size() * 4 * self.size_per_tile)
                 ))),
             3, 4)
         self.image = self.frames[1]
+        self.game = game
         self.rect = self.image.get_rect()
-        self.rect.center = game.center()
+        self.rect.center = self.game.center()
         self.pos = [self.rect.center[0] - self.rect.w, self.rect.center[1] - self.rect.h]
         self.name = player_name
-        self.game= game
+        
         self.health = health
         self.weight = weight
         self.inventory = inventory
@@ -242,15 +246,16 @@ class Player(pygame.sprite.Sprite):
         self.pos = pos
 
     def move(self, offset):
-        self.pos[0] += offset[0]
-        self.pos[1] += offset[1]
+        self.rect.centerx += offset[0] * self.get_velocity()
+        self.rect.centery += offset[1] * self.get_velocity()
+        self.pos = [self.rect.x, self.rect.y]
     
     def get_total_weight(self):
         return self.weight + self.inventory.get_weight()
 
     def get_velocity(self):
         return max(self.default_velocity * 0.2, 
-                   int(self.default_velocity - (0.5 * self.get_total_weight())))
+                   int(self.default_velocity - (0.5 * self.get_total_weight()))) / 100
 
     def __str__(self):
         return f"player_{self.name}: ({self.pos[0]}, {self.pos[1]})"
@@ -280,7 +285,6 @@ class Tiles(pygame.sprite.Sprite):
     def update(self, camera_pos): # отступ от края с учетом позиции камеры
         self.rect.x = camera_pos[0] + self.pos[0]
         self.rect.y = camera_pos[1] + self.pos[1]
-        self.pos = [self.rect.x, self.rect.y]
 
     def set_name(self, name):
         self.name = name
@@ -327,24 +331,25 @@ class Camera:
         self.pos = [(self.cfg('size_x') - (len(self.game.world.board[0])) * self.cfg.get_tile_size()) / 2,
                     (self.cfg('size_y') - (len(self.game.world.board)) * self.cfg.get_tile_size()) / 2
                     ] # camera's centering
+
+        self.update(self.pos)
+    
+    def update(self, pos): # обновление позиции относительно камеры
+        self.all_sprites.update(pos)
+            
+    def set(self, pos):
+        self.pos[0] = sizescale(pos[0])
+        self.pos[1] = sizescale(pos[1])
+        self.update(self.pos)
+
+    def move(self, offset):
+        self.pos[0] -= sizescale(offset[0])
+        self.pos[1] -= sizescale(offset[1])
+        self.update(self.pos)
         
         print(f"Camera's pos: {self.pos}")
         print(f"Board's width: {(len(self.game.world.board[0])) * self.cfg.get_tile_size()}")
         print(f"Board's height: {(len(self.game.world.board)) * self.cfg.get_tile_size()}")
-        self.update(self.pos)
-    
-    def update(self, pos):
-        self.all_sprites.update(pos)
-            
-    def set(self, pos):
-        self.pos[0] = pos[0]
-        self.pos[1] = pos[1]
-        self.update(pos)
-
-    def move(self, offset):
-        self.pos[0] += offset[0]
-        self.pos[1] += offset[1]
-        self.update((self.pos[0] + offset[0], self.pos[1] + offset[1]))
         
     def draw(self, screen):
         self.all_sprites.draw(screen)
