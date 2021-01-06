@@ -80,8 +80,8 @@ class Game:
     def __init__(self, config=Config()):
         self.config = config
         self.world = World()
-        self.camera = Camera(self)
         self.player = Player("Player", self.center(), self)
+        self.camera = Camera(self)
         
 
     def config(self, pamameter):
@@ -198,17 +198,16 @@ class EventReaction:
 
 class Player(pygame.sprite.Sprite):
     cfg = Config()
-    player_sprite = pygame.sprite.Group()
     image = scale_image(load_image("sprites\\objects\\npc\\male.png"), (cfg.get_tile_size(), cfg.get_tile_size()))
+    player_sprite = pygame.sprite.Group()
     
-    def __init__(self, player_name, pos, game, inventory=Inventory(), health=100, height=5, weight=50):
-        pygame.sprite.Sprite.__init__(self.player_sprite)
+    def __init__(self, player_name, pos, game, inventory=Inventory(), health=100, weight=50):
+        super().__init__(self.player_sprite)
         self.rect = self.image.get_rect()
         self.rect.center = game.center()
         self.name = player_name
         self.pos = pos
         self.health = health
-        self.height = height
         self.weight = weight
         self.inventory = inventory
         self.default_velocity = 100
@@ -232,6 +231,12 @@ class Player(pygame.sprite.Sprite):
     def move(self):
         pass
 
+    def __str__(self):
+        return f"player_{self.name}: ({self.pos[0]}, {self.pos[1]})"
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Objects:
     all_objects = pygame.sprite.Group()
@@ -252,8 +257,8 @@ class Tiles(pygame.sprite.Sprite):
         self.pos = [board_pos[0] * self.absolute_size, board_pos[1] * self.absolute_size]
         
     def update(self, camera_pos): # отступ от края с учетом позиции камеры
-        self.rect.x = camera_pos[0] + self.board_pos[0] * self.absolute_size
-        self.rect.y = camera_pos[1] + self.board_pos[1] * self.absolute_size
+        self.rect.x = camera_pos[0] + self.pos[0]
+        self.rect.y = camera_pos[1] + self.pos[1]
         self.pos = [self.rect.x, self.rect.y]
 
     def set_name(self, name):
@@ -292,8 +297,9 @@ class Camera:
     
     def __init__(self, game):
         self.game = game
+        self.player = game.player
         self.all_sprites = pygame.sprite.Group()
-        self.all_sprites.add(Player.player_sprite, Objects.all_objects, Tiles.all_tiles)
+        self.all_sprites.add(Tiles.all_tiles,  Objects.all_objects, self.player.player_sprite)
         self.center()
     
     def center(self):
