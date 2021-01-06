@@ -3,6 +3,7 @@ import json
 import random
 import math
 import sys
+from time import time
 import pygame
 
 from functions import *
@@ -25,8 +26,8 @@ def load_image(path, **kwargs):
 def scale_image(image, size):
     return pygame.transform.scale(image, size)
 
-def timescale(value, current_framerate, default_framerate=60):
-    return value * (default_framerate / current_framerate)
+def timescale(value, default_framerate=60):
+    return value * (default_framerate / Game.framerate)
     
 
 
@@ -74,12 +75,14 @@ class Menu:
 
 
 class Game:
+    framerate = Config().get()["framerate"]
+    
     def __init__(self, config=Config()):
         self.config = config
         self.world = World()
         self.camera = Camera(self)
         self.player = Player("Player", self.center(), self)
-        self.framerate = self.config.get()["framerate"]
+        
 
     def config(self, pamameter):
         return self.config[pamameter]
@@ -88,7 +91,6 @@ class Game:
         return (self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2)
 
     def display(self, screen):
-        self.camera.move((0, timescale(-5, self.framerate)))
         self.camera.draw(screen)
 
 
@@ -103,7 +105,7 @@ class World:
         for row in range(0, get_tile_num() * get_display_ratio()): # y
             board.append([])
             for tile in range(0, get_tile_num()): # x
-                board[row] += [Grass((tile, row))]
+                board[row] += [Grass([tile, row])]
         return board
 
 
@@ -195,16 +197,14 @@ class EventReaction:
 
 
 class Player(pygame.sprite.Sprite):
+    cfg = Config()
     player_sprite = pygame.sprite.Group()
+    image = scale_image(load_image("sprites\\objects\\npc\\male.png"), (cfg.get_tile_size(), cfg.get_tile_size()))
     
     def __init__(self, player_name, pos, game, inventory=Inventory(), health=100, height=5, weight=50):
-        super().__init__(self.player_sprite)
-        
-        self.image = scale_image(load_image("sprites/objects/npc/Male/Male 01-1.png"), (game.config.get_tile_size(), game.config.get_tile_size()))
+        pygame.sprite.Sprite.__init__(self.player_sprite)
         self.rect = self.image.get_rect()
-        self.rect.x = (game.config.get()['size_x'] - self.rect.w) / 2
-        self.rect.y = (game.config.get()['size_y'] - self.rect.h) / 2
-        
+        self.rect.center = game.center()
         self.name = player_name
         self.pos = pos
         self.health = health
@@ -215,8 +215,8 @@ class Player(pygame.sprite.Sprite):
         self.velocity = self.get_velocity()
 
     def update(self, camera_pos): # отступ от края с учетом позиции камеры
-        self.rect.x = camera_pos[0] + self.board_pos[0] * Tiles.absolute_size
-        self.rect.y = camera_pos[1] + self.board_pos[1] * Tiles.absolute_size
+        self.rect.x = camera_pos[0] + self.pos[0]
+        self.rect.y = camera_pos[1] + self.pos[1]
         self.pos = [self.rect.x, self.rect.y]
     
     def set_pos(self, pos):
