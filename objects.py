@@ -10,10 +10,6 @@ from functions import *
 def load_image(path):
     return pygame.image.load(path)
 
-def get_tile_num():
-    cfg = Config()
-    return math.ceil(cfg('size_x') / cfg('scale'))
-
 def get_display_ratio():
     cfg = Config()
     return math.ceil(cfg('size_y') / cfg('size_x'))
@@ -36,7 +32,7 @@ def timescale(value, default_framerate=60):
 def timescale_int(value, default_framerate=60):
     return int(timescale(value, default_framerate))
 
-def sizescale(value, default_scale = 48):
+def sizescale(value, default_scale = 80):
     return value * (default_scale / Game.scale)
 
 class Config:
@@ -48,7 +44,6 @@ class Config:
     "size_y": 720,
     "fullscreen": false,
 
-    "scale": 48,
     "framerate": 60
 } '''
         self.defaults = json.loads(self.text)
@@ -59,12 +54,10 @@ class Config:
             with open("config.json", "w", encoding="utf-8") as config:
                 config.write(self.text)
             self.set_defaults()
-        self.config['scale'] = int(self('size_x') // 26.6) # 26.6
+        self.config['scale'] = int(self('size_x') / 80) # 80
         self.tile_size = self('size_x') // self('scale')
 
     def __call__(self, parameter):
-        if parameter == 'scale':
-            return self.config['size_y'] // self.config[parameter]
         return self.config[parameter]
 
     def set_defaults(self):
@@ -97,20 +90,21 @@ class Game:
 
     def display(self, screen):
         self.camera.draw(screen)
+        screen.blit(self.night_layer, (0, 0))
 
 
 class World:
     def __init__(self, game):
         self.game = game
-        self.time = datetime.datetime.now().replace(second=0, microsecond=0)
+        self.time = datetime.datetime.now().replace(hour=12, minute = 0, second=0, microsecond=0)
         self.tile_size = Config().get_tile_size()
         self.board = self.create_board()
 
     def create_board(self):
         board = []
-        for row in range(0, get_tile_num() * get_display_ratio()): # y
+        for row in range(0, self.game.config.get()['size_y'] // Tiles.absolute_size + 1): # y
             board.append([])
-            for tile in range(0, get_tile_num()): # x
+            for tile in range(0, self.game.config.get()['size_x'] // Tiles.absolute_size + 1): # x
                 board[row] += [Grass([tile, row])]
         return board
     
@@ -147,17 +141,22 @@ class EventReaction:
     def __init__(self, game, night_layer):
         self.running = True
         self.iteration = 0
+        self.increase_time_speed = (1 // timescale(0.1))
+        print(self.increase_time_speed)
+        self.night_layer_change_speed = self.increase_time_speed * 5
         self.game = game
+        self.game.night_layer = night_layer
         self.night_layer = night_layer
         self.night_layer_change()
 
     def react(self, events):
         self.iteration += 1
-        self.iteration %= 1000000
+        self.iteration %= timescale_int(1000000000)
         
-        if self.iteration % timescale_int(1) == 0:
+        if self.iteration % self.increase_time_speed == 0:
             self.increase_time()
-            self.night_layer_change()
+            if self.iteration % self.night_layer_change_speed == 0:
+                self.night_layer_change()
         
         for event in events:
             if self.check_quit(event): return
@@ -165,6 +164,7 @@ class EventReaction:
     
         if any([self.game.player.direction_x, self.game.player.direction_y]) != 0:
             self.game.player.move((self.game.player.direction_x, self.game.player.direction_y), self.iteration)
+            self.game.camera.move((self.game.player.direction_x, self.game.player.direction_y))
 
     def player_move(self, event):
         if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
@@ -198,16 +198,17 @@ class EventReaction:
     
     def increase_time(self):
         self.game.world.time += datetime.timedelta(minutes=1)
-        print(self.game.world.time)
 
-    def night_layer_change(self): # переделать ===================== 
-        highest_tranparency = 97.5
-        print(self.game.world.time.hour)
-        if self.game.world.time.hour < 12:
-            transparency = highest_tranparency * (1 - ((self.game.world.time - datetime.datetime.combine(self.game.world.time, datetime.time(00, 00))).total_seconds() / 43200))
-        else:
-            transparency = highest_tranparency * (datetime.datetime.combine(self.game.world.time, datetime.time(12, 00)) - self.game.world.time).total_seconds() / 43200
-        self.night_layer.fill(pygame.Color(0, 0, 200))
+    def night_layer_change(self):
+        highest_tranparency = 40
+        
+        transparency = highest_tranparency  * 2.55 * (math.cos(
+            (self.game.world.time - datetime.datetime.combine(
+                self.game.world.time, datetime.time(3, 00)
+                )
+             ).total_seconds() / 60 / 60 * math.pi / 12) + 1) / 2
+            
+        self.night_layer.fill(pygame.Color(0, 0, 255))
         self.night_layer.set_alpha(transparency)    
 
 class AnimatedSprite:
@@ -242,9 +243,14 @@ class NPC:
         self.health = health
         self.weight = weight
         self.game = game
-        self.default_velocity = sizescale(4)
+        self.default_velocity = sizescale(0.2)
         self.velocity = self.get_velocity()
-        self.animation_speed = timescale_int(8) # lower - faster
+        self.animation_speed = timescale_int(24) # lower - faster
+        self.previous_animation_num = None
+        
+        pygame.mixer.init()
+        self.walking_sound = pygame.mixer.Sound('sounds\\walking.wav')
+        self.walking_sound.set_volume(0.1)
 
     def set_pos(self, pos):
         self.pos = pos
@@ -264,33 +270,37 @@ class NPC:
                     self.image = self.frames[4]
     
     def move(self, offset, iteration):
-        animation_num = int(iteration // self.animation_speed % 3)
-        if offset[1] != 0:
-            if offset[1] > 0:
-                self.image = self.frames[9 + animation_num]
-            if offset[1] < 0:
-                self.image = self.frames[animation_num]
-        elif offset[0] != 0:
+        animation_num = int(iteration // timescale(self.animation_speed) % 3)
+        if offset[0] != 0:
             if offset[0] > 0:
                 self.image = self.frames[6 + animation_num]
             if offset[0] < 0:
                 self.image = self.frames[3 + animation_num]
-            
-        if abs(offset[0]) == abs(offset[1]) == 1:
-            self.rect.centerx += sizescale(offset[0] * 0.75 * self.get_velocity())
-            self.rect.centery -= sizescale(offset[1] * 0.75 * self.get_velocity())
+        elif offset[1] != 0:
+            if offset[1] > 0:
+                self.image = self.frames[9 + animation_num]
+            if offset[1] < 0:
+                self.image = self.frames[animation_num]
+                
+        if abs(offset[0]) == abs(offset[1]) != 0:
+            self.rect.centerx += sizescale(offset[0]) * 0.75 * self.get_velocity()
+            self.rect.centery -= sizescale(offset[1]) * 0.75 * self.get_velocity()
         else:
-            self.rect.centerx += sizescale(offset[0] * self.get_velocity())
-            self.rect.centery -= sizescale(offset[1] * self.get_velocity())
+            self.rect.centerx += sizescale(offset[0]) * self.get_velocity()
+            self.rect.centery -= sizescale(offset[1]) * self.get_velocity()
         self.pos = [self.rect.x, self.rect.y]
+        
+        if offset[0] == offset[1] == 0:
+            self.walking_sound.stop()
+        
+        if self.previous_animation_num != animation_num:
+            self.walking_sound.play(maxtime=220)
+            self.previous_animation_num = animation_num
     
     def get_total_weight(self):
         return self.weight + self.inventory.get_weight()
 
     def get_velocity(self):
-        if self.__class__.__name__ == Player.__class__.__name__:
-            return max(self.default_velocity * 0.2, 
-                   int(self.default_velocity - (0.5 * self.get_total_weight()) / 100)) 
         return self.default_velocity
 
     def set_health(self, health):
@@ -310,7 +320,7 @@ class Player(pygame.sprite.Sprite, NPC):
     
     def __init__(self, player_name, game, inventory=Inventory(), health=100, weight=50):
         super().__init__(self.player_sprite)
-        NPC.__init__(self, player_name, [0, 0], game, health, "sprites\\objects\\npc\\female.png", weight)
+        NPC.__init__(self, player_name, [0, 0], game, health, "sprites\\objects\\npc\\male.png", weight)
         self.pos = [self.rect.center[0] - self.rect.w, self.rect.center[1] - self.rect.h]
         self.rect.center = self.game.center()
         self.inventory = inventory
@@ -335,7 +345,8 @@ class Objects:
 
 
 class Tiles(pygame.sprite.Sprite):
-    absolute_size = Config().get_tile_size()
+    cfg = Config()
+    absolute_size = cfg.get_tile_size()
     all_tiles = pygame.sprite.Group()
 
     def __init__(self, name, board_pos, is_stackable=False, is_placed=True):
@@ -379,9 +390,25 @@ class Grass(Tiles):
         return super().__repr__()
 
 
-class UI:
-    pass
+class UI(pygame.sprite.Sprite):
+    all_ui = pygame.sprite.Group()
     
+    def __init__(self, game):
+        super().__init__(self.all_ui)
+        self.game = game
+    
+    def display_inventory(self):
+        pass
+    
+    def get_inventory_center(self, item_num):
+        pass
+    
+    def display_clock(self):
+        pass
+    
+    def update(self):
+        pass
+        
 
 class Camera:
     cfg = Config()
@@ -401,6 +428,11 @@ class Camera:
         self.update(self.pos)
     
     def update(self, pos): # обновление позиции относительно камеры
+                
+        print(f"Camera's pos: {self.pos}")
+        print(f"Board's width: {(len(self.game.world.board[0])) * self.cfg.get_tile_size()}")
+        print(f"Board's height: {(len(self.game.world.board)) * self.cfg.get_tile_size()}")
+        
         self.all_sprites.update(pos)
             
     def set(self, pos):
@@ -408,14 +440,15 @@ class Camera:
         self.pos[1] = sizescale(pos[1])
         self.update(self.pos)
 
+    def set_center(self, pos):
+        self.pos[0] = self.game.center()[0] + sizescale(pos[0])
+        self.pos[1] = self.game.center()[1] + sizescale(pos[1])
+        self.update(self.pos)
+    
     def move(self, offset):
         self.pos[0] -= sizescale(offset[0])
-        self.pos[1] -= sizescale(offset[1])
+        self.pos[1] += sizescale(offset[1])
         self.update(self.pos)
-        
-        print(f"Camera's pos: {self.pos}")
-        print(f"Board's width: {(len(self.game.world.board[0])) * self.cfg.get_tile_size()}")
-        print(f"Board's height: {(len(self.game.world.board)) * self.cfg.get_tile_size()}")
         
     def draw(self, screen):
         self.all_sprites.draw(screen)

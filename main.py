@@ -24,8 +24,7 @@ while event_reaction.running:
 
     screen.fill(pygame.Color('#f2f2f2'))
     active_window.show(screen)
-    screen.blit(night_layer, (0, 0))
     pygame.display.flip()
     
-    clock.tick(config.get()['framerate'])
+    clock.tick(game.framerate)
 pygame.quit()
