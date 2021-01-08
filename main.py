@@ -11,18 +11,21 @@ pygame.init()
 pygame.display.set_caption(config.get()['GAME_CAPTION'])
 
 screen = pygame.display.set_mode((config.get()['size_x'], config.get()['size_y']))
+night_layer = pygame.Surface((config.get()['size_x'], config.get()['size_y']), pygame.SRCALPHA)
 if config.get()['fullscreen']:
     pygame.display.toggle_fullscreen()
 
-event_reaction = EventReaction(game)
+event_reaction = EventReaction(game, night_layer=night_layer)
 active_window = ActiveWindow(game)
 running = True
 
 while event_reaction.running:
     event_reaction.react(pygame.event.get())
 
-    clock.tick(config.get()['framerate'])
     screen.fill(pygame.Color('#f2f2f2'))
     active_window.show(screen)
+    screen.blit(night_layer, (0, 0))
     pygame.display.flip()
+    
+    clock.tick(config.get()['framerate'])
 pygame.quit()
