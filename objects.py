@@ -254,9 +254,6 @@ class NPC:
         self.animation_speed = timescale_int(24) # lower - faster
         self.previous_animation_num = None
         
-        
-        
-        
         if self.mixer_initialized:
             self.walking_sound = pygame.mixer.Sound('sounds\\walking.wav')
             self.walking_sound.set_volume(0.1)
@@ -304,6 +301,10 @@ class NPC:
                 self.walking_sound.stop()
         
         if self.previous_animation_num != animation_num:
+            try:
+                self.walking_sound.stop()
+            except:
+                pass
             if self.mixer_initialized:
                 self.walking_sound.play(maxtime=220)
             self.previous_animation_num = animation_num
@@ -331,7 +332,7 @@ class Player(pygame.sprite.Sprite, NPC):
     
     def __init__(self, player_name, game, inventory=Inventory(), health=100, weight=50):
         super().__init__(self.player_sprite)
-        NPC.__init__(self, player_name, [0, 0], game, health, "sprites\\objects\\npc\\male.png", weight)
+        NPC.__init__(self, player_name, [0, 0], game, health, "sprites\\objects\\npc\\female.png", weight)
         self.pos = [self.rect.center[0] - self.rect.w, self.rect.center[1] - self.rect.h]
         self.rect.center = self.game.center()
         self.inventory = inventory
@@ -439,11 +440,6 @@ class Camera:
         self.update(self.pos)
     
     def update(self, pos): # обновление позиции относительно камеры
-                
-        print(f"Camera's pos: {self.pos}")
-        print(f"Board's width: {(len(self.game.world.board[0])) * self.cfg.get_tile_size()}")
-        print(f"Board's height: {(len(self.game.world.board)) * self.cfg.get_tile_size()}")
-        
         self.all_sprites.update(pos)
             
     def set(self, pos):
