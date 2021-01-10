@@ -1,37 +1,29 @@
-## Welcome to GitHub Pages
+# Everlasting Journey - игра с видом от третьего лица
+Разрабатывается в качестве проекта **Яндекс.Лицей**.
 
-You can use the [editor on GitHub](https://github.com/EgorkA82/Everlasting-Journey/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+<p align="center"><a target="_blank" href="https://yandexlyceum.ru/"><img src="http://old.oksei.ru/attachments/article/372/Лого%20цветной.png" width=65%></img></a></p>
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+### Программа распростроняется на бесплатной основе, обладает <a target="_blank" href="https://unlicense.org/">`The Unlicense`</a>. Её модификация и использование в коммерческих целях разрешено.
+### Правильная работоспособность гарантируется на `Python 3.9.0+`.
 
-### Markdown
+<p align="center">
+<a href="https://python.org/"><img src="https://www.vippng.com/png/full/84-842346_related-image-python-programming.png" width=40%></img></a>
+</p>
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+### Игра находится в разработке. Примерно половина игры готова:
+> - [X] Cоздается мини-мир
+> - [X] Создается персонаж, которого можно двигать, нажимая клавиши `W`, `A`, `S`, `D`
+> - [X] Персонаж имеет анимацию и звук передвижения
+> - [X] Внешний мир игры меняется в зависимости от времени суток
 
-```markdown
-Syntax highlighted code block
+> - [ ] Имеется меню
+> - [ ] Работают сохранения
+> - [ ] Мир автоматически расширяется
+> - [ ] Появляются предметы и NPC (кроме игрока)
 
-# Header 1
-## Header 2
-### Header 3
 
-- Bulleted
-- List
 
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/EgorkA82/Everlasting-Journey/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+### Контакты:
+- [ВКонтакте](https://vk.com/egorka_82)
+- [Telegram](https://t.me/EgorBlyablin)
+- [Почта](mailto:eg.blyablin@yandex.ru)
