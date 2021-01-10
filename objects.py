@@ -226,6 +226,12 @@ class AnimatedSprite:
     
 class NPC:
     cfg = Config()
+    mixer_initialized = False
+    try:
+        pygame.mixer.init()
+        mixer_initialized = True
+    except:
+        pass
     
     def __init__(self, name, pos, game, health, image_src, weight=55):
         self.size_per_tile = 0.9
@@ -248,9 +254,12 @@ class NPC:
         self.animation_speed = timescale_int(24) # lower - faster
         self.previous_animation_num = None
         
-        pygame.mixer.init()
-        self.walking_sound = pygame.mixer.Sound('sounds\\walking.wav')
-        self.walking_sound.set_volume(0.1)
+        
+        
+        
+        if self.mixer_initialized:
+            self.walking_sound = pygame.mixer.Sound('sounds\\walking.wav')
+            self.walking_sound.set_volume(0.1)
 
     def set_pos(self, pos):
         self.pos = pos
@@ -291,10 +300,12 @@ class NPC:
         self.pos = [self.rect.x, self.rect.y]
         
         if offset[0] == offset[1] == 0:
-            self.walking_sound.stop()
+            if self.mixer_initialized:
+                self.walking_sound.stop()
         
         if self.previous_animation_num != animation_num:
-            self.walking_sound.play(maxtime=220)
+            if self.mixer_initialized:
+                self.walking_sound.play(maxtime=220)
             self.previous_animation_num = animation_num
     
     def get_total_weight(self):
