@@ -77,7 +77,7 @@ class Menu:
 
 class Game:
     pygame.mixer.init()
-    music = pygame.mixer.Sound("sounds\\background_music.wav")
+    music = pygame.mixer.Sound("sounds\\background_music.ogg")
     music.play(-1)
     music.set_volume(0.05)
     
