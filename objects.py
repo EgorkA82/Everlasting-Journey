@@ -76,6 +76,11 @@ class Menu:
 
 
 class Game:
+    pygame.mixer.init()
+    music = pygame.mixer.Sound("sounds\\background_music.wav")
+    music.play(-1)
+    music.set_volume(0.05)
+    
     config = Config()
     framerate = config.get()["framerate"]
     scale = config.get()["scale"]
@@ -85,8 +90,8 @@ class Game:
         self.player = Player("Player", self)
         self.camera = Camera(self)
     
-    def center(self):
-        return (self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2)
+    def get_center(self):
+        return [self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2]
 
     def display(self, screen):
         self.camera.draw(screen)
@@ -98,15 +103,15 @@ class World:
         self.game = game
         self.time = datetime.datetime.now().replace(hour=12, minute = 0, second=0, microsecond=0)
         self.tile_size = Config().get_tile_size()
-        self.board = self.create_board()
+        self.create_board()
 
     def create_board(self):
         board = []
-        for row in range(0, self.game.config.get()['size_y'] // Tiles.absolute_size + 1): # y
+        for row in range(0, (self.game.config.get()['size_y'] // Tiles.absolute_size + 1)): # y
             board.append([])
-            for tile in range(0, self.game.config.get()['size_x'] // Tiles.absolute_size + 1): # x
+            for tile in range(0, (self.game.config.get()['size_x'] // Tiles.absolute_size + 1)): # x
                 board[row] += [Grass([tile, row])]
-        return board
+        self.board = board
     
     def width(self):
         return (len(self.board[0])) * self.game.config.get_tile_size()
@@ -114,8 +119,8 @@ class World:
     def height(self):
         return (len(self.board)) * self.game.config.get_tile_size()
     
-    def center(self): # от начала карты
-        return ((super().config.get()['size_x'] - self.width()) / 2, (super().config.get()['size_y'] - self.height()) / 2)
+    def get_center(self): # от начала карты
+        return ((self.game.config.get()['size_x'] - self.width()) / 2, (self.game.config.get()['size_y'] - self.height()) / 2)
 
 
 class ActiveWindow:
@@ -142,7 +147,6 @@ class EventReaction:
         self.running = True
         self.iteration = 0
         self.increase_time_speed = (1 // timescale(0.1))
-        print(self.increase_time_speed)
         self.night_layer_change_speed = self.increase_time_speed * 5
         self.game = game
         self.game.night_layer = night_layer
@@ -164,7 +168,7 @@ class EventReaction:
     
         if any([self.game.player.direction_x, self.game.player.direction_y]) != 0:
             self.game.player.move((self.game.player.direction_x, self.game.player.direction_y), self.iteration)
-            self.game.camera.move((self.game.player.direction_x, self.game.player.direction_y))
+            # self.game.camera.set_center(self.game.player.rect.center)
 
     def player_move(self, event):
         if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
@@ -289,11 +293,15 @@ class NPC:
                 self.image = self.frames[animation_num]
                 
         if abs(offset[0]) == abs(offset[1]) != 0:
-            self.rect.centerx += sizescale(offset[0]) * 0.75 * self.get_velocity()
-            self.rect.centery -= sizescale(offset[1]) * 0.75 * self.get_velocity()
+            if 0 + self.rect.w / 2 <= self.rect.centerx + sizescale(offset[0]) * 0.75 * self.get_velocity() <= self.cfg.get()['size_x'] - self.rect.w / 2:
+                self.rect.centerx += sizescale(offset[0]) * 0.75 * self.get_velocity()
+            if 0 + self.rect.h / 2 <= self.rect.centery - sizescale(offset[1]) * 0.75 * self.get_velocity() <= self.cfg.get()['size_y'] - self.rect.h / 2:
+                self.rect.centery -= sizescale(offset[1]) * 0.75 * self.get_velocity()
         else:
-            self.rect.centerx += sizescale(offset[0]) * self.get_velocity()
-            self.rect.centery -= sizescale(offset[1]) * self.get_velocity()
+            if 0 + self.rect.w / 2 <= self.rect.centerx + sizescale(offset[0]) * self.get_velocity() <= self.cfg.get()['size_x'] - self.rect.w / 2:
+                self.rect.centerx += sizescale(offset[0]) * self.get_velocity()
+            if 0 + self.rect.h / 2 <= self.rect.centery - sizescale(offset[1]) * self.get_velocity() <= self.cfg.get()['size_y'] - self.rect.h / 2:
+                self.rect.centery -= sizescale(offset[1]) * self.get_velocity()
         self.pos = [self.rect.x, self.rect.y]
         
         if offset[0] == offset[1] == 0:
@@ -334,7 +342,7 @@ class Player(pygame.sprite.Sprite, NPC):
         super().__init__(self.player_sprite)
         NPC.__init__(self, player_name, [0, 0], game, health, "sprites\\objects\\npc\\female.png", weight)
         self.pos = [self.rect.center[0] - self.rect.w, self.rect.center[1] - self.rect.h]
-        self.rect.center = self.game.center()
+        self.rect.center = self.game.get_center()
         self.inventory = inventory
         self.is_moving = False
         self.direction_x = 0
@@ -372,8 +380,8 @@ class Tiles(pygame.sprite.Sprite):
         self.pos = [board_pos[0] * self.absolute_size, board_pos[1] * self.absolute_size]
         
     def update(self, camera_pos): # отступ от края с учетом позиции камеры
-        self.rect.x = camera_pos[0] + self.pos[0]
-        self.rect.y = camera_pos[1] + self.pos[1]
+        self.rect.centerx = self.pos[0] + camera_pos[0]
+        self.rect.centery = self.pos[1] + camera_pos[1]
 
     def set_name(self, name):
         self.name = name
@@ -430,32 +438,28 @@ class Camera:
         self.player = game.player
         self.all_sprites = pygame.sprite.Group()
         self.all_sprites.add(Tiles.all_tiles,  Objects.all_objects, self.player.player_sprite)
-        self.center()
-    
-    def center(self):
-        self.pos = [(self.cfg('size_x') - (len(self.game.world.board[0])) * self.cfg.get_tile_size()) / 2,
-                    (self.cfg('size_y') - (len(self.game.world.board)) * self.cfg.get_tile_size()) / 2
-                    ] # camera's centering
-
+        self.pos = [0, 0]
         self.update(self.pos)
     
-    def update(self, pos): # обновление позиции относительно камеры
-        self.all_sprites.update(pos)
-            
+    def update(self, pos, exception=[]): # обновление позиции относительно камеры
+        all_sprites = self.all_sprites.copy()
+        all_sprites.remove(exception)
+        all_sprites.update(pos)
+         
     def set(self, pos):
-        self.pos[0] = sizescale(pos[0])
-        self.pos[1] = sizescale(pos[1])
+        self.pos = pos
         self.update(self.pos)
 
     def set_center(self, pos):
-        self.pos[0] = self.game.center()[0] + sizescale(pos[0])
-        self.pos[1] = self.game.center()[1] + sizescale(pos[1])
+        if self.is_movable([pos[0], 0]):
+            self.pos[0] = self.game.get_center()[0] - pos[0]
+        if self.is_movable([0, pos[1]]):
+            self.pos[1] = self.game.get_center()[1] - pos[1]
         self.update(self.pos)
     
-    def move(self, offset):
-        self.pos[0] -= sizescale(offset[0])
-        self.pos[1] += sizescale(offset[1])
-        self.update(self.pos)
-        
+    def is_movable(self, offset):
+        print(self.pos[0] - offset[0], self.game.world.game.get_center()[0])
+        return abs(self.pos[0] - offset[0]) <= abs(self.game.world.game.get_center()[0]) and abs(self.pos[1] - offset[1]) <= abs(self.game.world.game.get_center()[1])
+    
     def draw(self, screen):
         self.all_sprites.draw(screen)
