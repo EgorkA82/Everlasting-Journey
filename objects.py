@@ -86,9 +86,9 @@ class Game:
         self.camera = Camera(self)
         
         pygame.mixer.init()
-        pygame.mixer.music.load("sounds\\background_music.wav")
-        pygame.mixer.music.play()
-        pygame.mixer.music.set_volume(0.05)
+        self.music = pygame.mixer.Sound('sounds\music.wav')
+        self.music.play(-1)
+        self.music.set_volume(0.1)
     
     def get_center(self):
         return [self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2]
@@ -261,7 +261,7 @@ class NPC:
         
         if self.mixer_initialized:
             self.walking_sound = pygame.mixer.Sound('sounds\\walking.wav')
-            self.walking_sound.set_volume(0.1)
+            self.walking_sound.set_volume(0.12)
 
     def set_pos(self, pos):
         self.pos = pos
