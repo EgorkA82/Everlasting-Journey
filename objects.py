@@ -76,11 +76,6 @@ class Menu:
 
 
 class Game:
-    pygame.mixer.init()
-    music = pygame.mixer.Sound("sounds\\background_music.ogg")
-    music.play(-1)
-    music.set_volume(0.05)
-    
     config = Config()
     framerate = config.get()["framerate"]
     scale = config.get()["scale"]
@@ -89,6 +84,11 @@ class Game:
         self.world = World(self)
         self.player = Player("Player", self)
         self.camera = Camera(self)
+        
+        pygame.mixer.init()
+        pygame.mixer.music.load("sounds\\background_music.wav")
+        pygame.mixer.music.play()
+        pygame.mixer.music.set_volume(0.05)
     
     def get_center(self):
         return [self.config.get()['size_x'] // 2, self.config.get()['size_y'] // 2]
@@ -232,6 +232,7 @@ class NPC:
     cfg = Config()
     mixer_initialized = False
     try:
+        pygame.mixer.pre_init(44100, -16, 1, 512)
         pygame.mixer.init()
         mixer_initialized = True
     except:
