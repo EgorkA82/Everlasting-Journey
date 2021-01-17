@@ -1,6 +1,6 @@
 # Everlasting Journey - игра с видом от третьего лица
 <p align="center">
-<img src="https://img.shields.io/static/v1?label=done&message=70%&color=success"/><a href="https://www.python.org/"><img alt="GitHub release (latest by date)" src="https://img.shields.io/badge/support-python%203.9.0%2B-blue"><a/><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/downloads/EgorkA82/Everlasting-Journey/v0.7/total?label=downloads"><img alt="GitHub" src="https://img.shields.io/github/license/EgorkA82/Everlasting-Journey"/>
+<img src="https://img.shields.io/static/v1?label=done&message=70%&color=success"/><a href="https://www.python.org/"><img alt="GitHub release (latest by date)" src="https://img.shields.io/badge/code-python%203.9.0%2B-blue"><a/><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/downloads/EgorkA82/Everlasting-Journey/v0.7/total?label=downloads"><img alt="GitHub" src="https://img.shields.io/github/license/EgorkA82/Everlasting-Journey"/><img alt="Discord" src="https://img.shields.io/discord/691529833238364161">
 </p>
 
 Разрабатывается в качестве проекта **Яндекс.Лицей**.
