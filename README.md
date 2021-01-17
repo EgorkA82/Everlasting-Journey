@@ -7,8 +7,8 @@
   <a target="_blank" href="https://yandexlyceum.ru/"><img src="http://old.oksei.ru/attachments/article/372/Лого%20цветной.png" width=60%></a><br><a href="https://python.org/"><img src="https://www.vippng.com/png/full/84-842346_related-image-python-programming.png" width=20%></a>
 </p>
 
-Для запуска игры достаточно запустить `main.pyw`<br>
-Изменять настройки игры можно, редактируя файл `config.json`
+Изменять настройки игры можно, редактируя файл `config.json`<br>
+Для запуска игры достаточно запустить `main.pyw`:
 <p align="center">
 <img src="https://eg-blyablin.ru/launch.gif"/></p>
 
