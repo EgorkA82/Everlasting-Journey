@@ -2,7 +2,7 @@ import random
 import functions
 import objects
 import pygame
-import copy
+
   
 class NPC(pygame.sprite.Sprite):
     all_npc = pygame.sprite.Group()
@@ -102,6 +102,9 @@ class NPC(pygame.sprite.Sprite):
             except:
                 pass
             if self.mixer_initialized:
+                if self.__class__ != Player:
+                    self.walking_sound.set_volume(max(0, 1 / (abs(self.game.player.rect.centerx - self.rect.centerx) ** 2 + abs(self.game.player.rect.centery - self.rect.centery) ** 2) ** 0.5) * 50)
+                
                 self.walking_sound.play(maxtime=220)
             self.previous_animation_num = animation_num
     
@@ -128,7 +131,7 @@ class NPC(pygame.sprite.Sprite):
         objects.Camera.colliding_sprites.remove(self)
         if not pygame.sprite.spritecollide(self, objects.Camera.colliding_sprites, False):
             if self.COLLIDE_BORDERS:
-                if self.rect.bottom < self.game.world.width():
+                if self.game.world.board[0][0].rect.left < self.rect.left and self.rect.right < self.game.world.board[-1][-1].rect.right:
                     objects.Camera.colliding_sprites.add(self)
                     return True
                 else:
@@ -148,7 +151,7 @@ class NPC(pygame.sprite.Sprite):
         objects.Camera.colliding_sprites.remove(self)
         if not pygame.sprite.spritecollide(self, objects.Camera.colliding_sprites, False):
             if self.COLLIDE_BORDERS:
-                if self.rect.bottom < self.game.world.height():
+                if self.game.world.board[0][0].rect.top < self.rect.top and self.rect.bottom < self.game.world.board[-1][-1].rect.bottom:
                     objects.Camera.colliding_sprites.add(self)
                     return True
                 else:
@@ -159,11 +162,10 @@ class NPC(pygame.sprite.Sprite):
             return True
         else:
             self.rect.centery += self.game.sizescale(offset[1]) * self.get_velocity()
-            objects.Camera.colliding_sprites.add(self)
             return False
     
     def update(self, camera_pos): # отступ от края с учетом позиции камеры
-        self.rect.x = self.rect.x - camera_pos[0]
+        self.rect.centerx = self.rect.centerx - camera_pos[0]
         self.rect.centery = self.rect.centery - camera_pos[1]
     
     def __str__(self):

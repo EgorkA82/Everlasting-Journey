@@ -99,16 +99,16 @@ class World:
     def __init__(self, game):
         self.game = game
         self.time = datetime.datetime.now().replace(hour=12, minute = 0, second=0, microsecond=0)
-        self.map_size = 2
+        self.map_size = 3
         self.tile_size = Config().get_tile_size()
         self.create_board()
         self.size = [self.width(), self.height()]
 
     def create_board(self):
         board = []
-        for row in range(0, (self.game.config.get()['size_y'] // self.game.tiles.Tiles.absolute_size + 1) * self.map_size): # y
+        for row in range(0, int((self.game.config.get()['size_y'] // self.game.tiles.Tiles.absolute_size + 1) * self.map_size)): # y
             board.append([])
-            for tile in range(0, (self.game.config.get()['size_x'] // self.game.tiles.Tiles.absolute_size + 1) * self.map_size): # x
+            for tile in range(0, int((self.game.config.get()['size_x'] // self.game.tiles.Tiles.absolute_size + 1) * self.map_size)): # x
                 board[row] += [self.game.tiles.Grass([tile - (self.game.config.get()['size_x'] // self.game.tiles.Tiles.absolute_size + 1) * (self.map_size // 2), row - (self.game.config.get()['size_y'] // self.game.tiles.Tiles.absolute_size + 1) * (self.map_size // 2)])]
         self.board = board
     
@@ -207,7 +207,7 @@ class EventReaction:
                 self.game.player.set_direction(right=True)
                  
     def check_quit(self, event):
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             self.running = False
             return True
         return False
