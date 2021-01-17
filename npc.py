@@ -1,3 +1,4 @@
+import random
 import functions
 import objects
 import pygame
@@ -15,10 +16,6 @@ class NPC(pygame.sprite.Sprite):
         pass
     
     def __init__(self, name, pos, game, health, image_src, weight=55):
-        if name != Player.__name__:
-            super().__init__(self.all_npc)
-        else:
-            super().__init__(Player.player_sprite)
         self.size_per_tile = 0.9
         self.frames = functions.scale_image(objects.AnimatedSprite.cut_sheet(
             functions.load_image(image_src), 3, 4), 
@@ -28,7 +25,15 @@ class NPC(pygame.sprite.Sprite):
             ))
         self.image = self.frames[1]
         self.rect = self.image.get_rect()
-        self.rect.center = pos
+        if name != Player.__name__:
+            super().__init__(self.all_npc)
+            self.vx = 0
+            self.vy = 0
+            self.move_itaration = random.randrange(50, 250)
+            self.rect.center = pos
+        else:
+            super().__init__(Player.player_sprite)
+        
         self.name = name
         self.max_health = health
         self.health = health
@@ -67,22 +72,14 @@ class NPC(pygame.sprite.Sprite):
         
         if abs(offset[0]) == abs(offset[1]) != 0:
             if offset[0] != 0:
-                if self.x_movable(offset, diagonal=True):
-                    self.rect.centerx += self.game.sizescale(offset[0]) * 0.75 * self.get_velocity()
-                    moved = True
+                moved = self.x_move(offset, diagonal=True)
             if offset[1] != 0:
-                if self.y_movable(offset, diagonal=True):
-                    self.rect.centery -= self.game.sizescale(offset[1]) * 0.75 * self.get_velocity()
-                    moved = True
+                moved = self.y_move(offset, diagonal=True)
         else:
             if offset[0] != 0:
-                if self.x_movable(offset):
-                    self.rect.centerx += self.game.sizescale(offset[0]) * self.get_velocity()
-                    moved = True
+                moved = self.x_move(offset)
             if offset[1] != 0:
-                if self.y_movable(offset):
-                    self.rect.centery -= self.game.sizescale(offset[1]) * self.get_velocity()
-                    moved = True # borders limit =============================
+                moved = self.y_move(offset)
         
         if offset[0] != 0 and moved:
             if offset[0] > 0:
@@ -125,33 +122,49 @@ class NPC(pygame.sprite.Sprite):
         elif self.health + health_change > self.max_health:
             self.health = self.max_health
     
-    def x_movable(self, offset, diagonal=False):
+    def x_move(self, offset, diagonal=False):
         self.rect.centerx += self.game.sizescale(offset[0]) * (0.75 if diagonal else 1) * self.get_velocity()
         
+        objects.Camera.colliding_sprites.remove(self)
         if not pygame.sprite.spritecollide(self, objects.Camera.colliding_sprites, False):
             if self.COLLIDE_BORDERS:
-                if 0 < self.rect.left and self.rect.bottom < self.game.width():
+                if self.rect.bottom < self.game.world.width():
+                    objects.Camera.colliding_sprites.add(self)
                     return True
                 else:
+                    self.rect.centerx -= self.game.sizescale(offset[0]) * self.get_velocity()
+                    objects.Camera.colliding_sprites.add(self)
                     return False
+            objects.Camera.colliding_sprites.add(self)
             return True
         else:
-            self.rect.centerx -= (self.game.sizescale(offset[0]) * (0.75 if diagonal else 1) * self.get_velocity())
+            self.rect.centerx -= self.game.sizescale(offset[0]) * self.get_velocity()
+            objects.Camera.colliding_sprites.add(self)
             return False
     
-    def y_movable(self, offset, diagonal=False):
+    def y_move(self, offset, diagonal=False):
         self.rect.centery -= self.game.sizescale(offset[1]) * (0.75 if diagonal else 1) * self.get_velocity()
         
+        objects.Camera.colliding_sprites.remove(self)
         if not pygame.sprite.spritecollide(self, objects.Camera.colliding_sprites, False):
             if self.COLLIDE_BORDERS:
-                if 0 < self.rect.top and self.rect.bottom < self.game.height():
+                if self.rect.bottom < self.game.world.height():
+                    objects.Camera.colliding_sprites.add(self)
                     return True
                 else:
+                    self.rect.centery += self.game.sizescale(offset[1]) * self.get_velocity()
+                    objects.Camera.colliding_sprites.add(self)
                     return False
+            objects.Camera.colliding_sprites.add(self)
             return True
         else:
-            self.rect.centery += (self.game.sizescale(offset[1]) * (0.75 if diagonal else 1) * self.get_velocity())
+            self.rect.centery += self.game.sizescale(offset[1]) * self.get_velocity()
+            objects.Camera.colliding_sprites.add(self)
             return False
+    
+    def update(self, camera_pos): # отступ от края с учетом позиции камеры
+        self.rect.x = self.rect.x - camera_pos[0]
+        self.rect.centery = self.rect.centery - camera_pos[1]
     
     def __str__(self):
         return f"{self.__class__}_{self.name}: ({self.pos[0]}, {self.pos[1]})"
@@ -166,12 +179,10 @@ class Player(NPC):
     def __init__(self, player_name, game, health=100, weight=50):
         NPC.__init__(self, player_name, game.get_center(), game, health, "sprites\\objects\\Characters\\female.png", weight)
         self.rect.center = self.game.get_center()
+        self.default_velocity = game.sizescale(0.2)
         self.is_moving = False
         self.direction_x = 0
         self.direction_y = 0
-
-    def center(self): # отступ от края с учетом позиции камеры
-        self.rect.center = self.game.world.get_center()
 
     def __str__(self):
         return f"{self.__class__}_{self.name}: ({self.pos[0]}, {self.pos[1]})"

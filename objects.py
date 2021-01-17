@@ -2,6 +2,7 @@ import datetime
 import json
 import math
 import pygame
+import random
 
 from functions import *
 
@@ -62,10 +63,13 @@ class Game:
         self.player = self.npc.Player("Player", self)
         self.camera = Camera(self)
         
-        pygame.mixer.init()
-        self.music = pygame.mixer.Sound('sounds\music.wav')
-        self.music.play(-1)
-        self.music.set_volume(0.1)
+        try:
+            pygame.mixer.init()
+            self.music = pygame.mixer.Sound('sounds\music.wav')
+            self.music.play(-1)
+            self.music.set_volume(0.1)
+        except:
+            pass
     
     def get_center(self):
         return [self.width() // 2, self.height() // 2]
@@ -95,21 +99,23 @@ class World:
     def __init__(self, game):
         self.game = game
         self.time = datetime.datetime.now().replace(hour=12, minute = 0, second=0, microsecond=0)
+        self.map_size = 2
         self.tile_size = Config().get_tile_size()
         self.create_board()
         self.size = [self.width(), self.height()]
 
     def create_board(self):
         board = []
-        for row in range(0, (self.game.config.get()['size_y'] // self.game.tiles.Tiles.absolute_size + 1)): # y
+        for row in range(0, (self.game.config.get()['size_y'] // self.game.tiles.Tiles.absolute_size + 1) * self.map_size): # y
             board.append([])
-            for tile in range(0, (self.game.config.get()['size_x'] // self.game.tiles.Tiles.absolute_size + 1)): # x
-                board[row] += [self.game.tiles.Grass([tile, row])]
+            for tile in range(0, (self.game.config.get()['size_x'] // self.game.tiles.Tiles.absolute_size + 1) * self.map_size): # x
+                board[row] += [self.game.tiles.Grass([tile - (self.game.config.get()['size_x'] // self.game.tiles.Tiles.absolute_size + 1) * (self.map_size // 2), row - (self.game.config.get()['size_y'] // self.game.tiles.Tiles.absolute_size + 1) * (self.map_size // 2)])]
         self.board = board
     
     def create_npc(self):
         self.game.npc.Wizard([self.game.width() * 0.25, self.game.get_center()[1]], self.game)
         self.game.npc.Wizard([self.game.width() * 0.75, self.game.get_center()[1]], self.game)
+        self.game.npc.Male([self.game.get_center()[0], self.game.get_center()[1] * 0.5], self.game)
     
     def width(self):
         return (len(self.board[0])) * self.game.config.get_tile_size()
@@ -163,12 +169,18 @@ class EventReaction:
         
             if any([self.game.player.direction_x, self.game.player.direction_y]) != 0:
                 self.game.player.move((self.game.player.direction_x, self.game.player.direction_y), self.iteration)
-                # self.game.camera.set_center(self.game.player.rect.center)
-        
+                self.game.camera.set_center(self.game.player.rect.center)
+                
+            for npc in self.game.npc.NPC.all_npc:
+                if self.iteration % self.game.timescale_int(npc.move_itaration) >= 1:
+                    npc.move([npc.vx, npc.vy], self.iteration)
+                else:
+                    npc.vx, npc.vy = (random.random() - 0.5) * 2, (random.random() - 0.5) * 2
+                    npc.move_itaration = random.randrange(50, 250)
+                    
         if active_window.__class__ == Menu:
             for event in events:
-                if self.check_quit(event): return
-            
+                if self.check_quit(event): return  
 
     def player_move(self, event):
         if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
@@ -264,29 +276,24 @@ class Camera:
         self.game = game
         self.player = game.player
         self.all_sprites.add(self.game.tiles.Tiles.all_tiles,  Objects.all_objects, self.game.npc.NPC.all_npc, self.player.player_sprite, UI.all_ui)
-        self.colliding_sprites.add(Objects.all_objects, self.game.npc.NPC.all_npc)
+        self.colliding_sprites.add(Objects.all_objects, self.game.npc.NPC.all_npc, self.player.player_sprite)
         self.pos = [0, 0]
         self.update(self.pos)
+        
+        for tile in self.game.tiles.Tiles.all_tiles:
+            tile.place(self.pos)
     
-    def update(self, pos, exception=[]): # обновление позиции относительно камеры
-        all_sprites = self.all_sprites.copy()
-        all_sprites.remove(exception)
-        all_sprites.update(pos)
-         
+    def update(self, pos): # обновление позиции относительно камеры
+        self.all_sprites.update(pos)
+    
     def set(self, pos):
         self.pos = pos
         self.update(self.pos)
 
     def set_center(self, pos):
-        if self.is_movable([pos[0], 0]):
-            self.pos[0] = pos[0]
-        if self.is_movable([0, pos[1]]):
-            self.pos[1] = pos[1]
+        self.pos[0] = pos[0] - self.game.get_center()[0]
+        self.pos[1] = pos[1] - self.game.get_center()[1]
         self.update(self.pos)
-    
-    def is_movable(self, offset):
-        print(self.pos[0] - offset[0], self.game.world.game.get_center()[0])
-        return abs(self.pos[0] - offset[0]) <= abs(self.game.world.game.get_center()[0]) and abs(self.pos[1] - offset[1]) <= abs(self.game.world.game.get_center()[1])
-    
+
     def draw(self, screen):
         self.all_sprites.draw(screen)

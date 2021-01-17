@@ -20,9 +20,13 @@ class Tiles(pygame.sprite.Sprite):
         self.pos = [board_pos[0] * self.absolute_size, board_pos[1] * self.absolute_size]
         
     def update(self, camera_pos): # отступ от края с учетом позиции камеры
-        self.rect.centerx = self.pos[0] + camera_pos[0]
-        self.rect.centery = self.pos[1] + camera_pos[1]
+        self.rect.x = self.rect.x - camera_pos[0]
+        self.rect.centery = self.rect.centery - camera_pos[1]
 
+    def place(self, pos):
+        self.rect.x = self.pos[0] - pos[0]
+        self.rect.centery = self.pos[1] - pos[1]
+    
     def set_name(self, name):
         self.name = name
 
