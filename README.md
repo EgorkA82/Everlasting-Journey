@@ -7,9 +7,25 @@
   <a target="_blank" href="https://yandexlyceum.ru/"><img src="http://old.oksei.ru/attachments/article/372/Лого%20цветной.png" width=60%></a><br><a href="https://python.org/"><img src="https://www.vippng.com/png/full/84-842346_related-image-python-programming.png" width=20%></a>
 </p>
 
+Для запуска игры достаточно запустить `main.pyw`<br>
+Изменять настройки игры можно, редактируя файл `config.json`
+<p align="center">
+<img src="https://eg-blyablin.ru/launch.gif"/></p>
+
+
+Вы играете за персонажа, двигать которого можно, нажимая клавиши `W`, `A`, `S`, `D`
+<br>
+Вместе с вами появятся три неигровых персонажа: два **Мага** и один **Исследователь**
+<p align="center">
+<img src="https://eg-blyablin.ru/move.gif"/></p>
+
+В игре работает **система коллизий** - столкновений с окружением. Например, вы не можете пройти сквозь NPC.
+<p align="center">
+<img src="https://eg-blyablin.ru/collisions.gif"/></p>
+
 ### Игра находится в разработке. Больше 70% игры готово:
 > - [X] Cоздается мини-мир
-> - [X] Создается персонаж, которого можно двигать, нажимая клавиши `W`, `A`, `S`, `D`
+> - [X] Создается персонаж, которого можно двигать
 > - [X] Персонаж имеет анимацию и звук передвижения
 > - [X] Внешний мир игры меняется в зависимости от времени суток
 > - [X] Камера следит за игроком
