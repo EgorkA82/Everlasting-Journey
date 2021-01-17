@@ -36,6 +36,6 @@
 
 
 ### Контакты:
-- [ВКонтакте](https://vk.com/egorka_82)
+- [ВКонтакте](https://vk.com/eg_blyablin)
 - [Telegram](https://t.me/EgorBlyablin)
 - [Почта](mailto:eg.blyablin@yandex.ru)
