@@ -5,7 +5,7 @@ from objects import *
 clock = pygame.time.Clock()
 game = Game()
 menu = Menu()
-config = game.config
+config = game.config 
 
 pygame.init()
 pygame.display.set_caption(config.get()['GAME_CAPTION'])
@@ -16,7 +16,7 @@ if config.get()['fullscreen']:
     pygame.display.toggle_fullscreen()
 
 event_reaction = EventReaction(game, night_layer=night_layer)
-active_window = ActiveWindow(game)
+active_window = ActiveWindow(menu, windows=[menu, game])
 running = True
 
 while event_reaction.running:

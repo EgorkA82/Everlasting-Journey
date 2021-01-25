@@ -1,6 +1,8 @@
 import datetime
 import json
 import math
+from os import access
+import re
 import pygame
 import random
 
@@ -44,9 +46,12 @@ class Config:
         return math.ceil(self('size_y') / self('size_x'))
 
 
-class Menu:
+class Menu:    
     def display(self, screen):
-        pass
+        config = Game.config
+        background = scale_image(load_image("sprites\\menu_background.png"), size=[config.get()["size_x"], config.get()["size_y"]])
+        background
+        screen.blit(background, [0, 0])
 
 
 class Game:
@@ -113,9 +118,13 @@ class World:
         self.board = board
     
     def create_npc(self):
-        self.game.npc.Wizard([self.game.width() * 0.25, self.game.get_center()[1]], self.game)
-        self.game.npc.Wizard([self.game.width() * 0.75, self.game.get_center()[1]], self.game)
-        self.game.npc.Male([self.game.get_center()[0], self.game.get_center()[1] * 0.5], self.game)
+        # self.game.npc.Wizard([self.game.width() * 0.25, self.game.get_center()[1]], self.game)
+        # self.game.npc.Wizard([self.game.width() * 0.75, self.game.get_center()[1]], self.game)
+        # self.game.npc.Male([self.game.get_center()[0], self.game.get_center()[1] * 0.5], self.game)
+        pass
+    
+    def create_coins(self):
+        self.game.tiles.Coin([self.game.get_center()[0], self.game.get_center()[1] * 0.5])
     
     def width(self):
         return (len(self.board[0])) * self.game.config.get_tile_size()
@@ -128,14 +137,31 @@ class World:
 
 
 class ActiveWindow:
-    def __init__(self, window):
+    def __init__(self, window, windows):
         self.current_window = window
+        self.game_window = windows[1]
+        self.menu_window = windows[0]
 
     def show(self, screen):
         self.current_window.display(screen)
 
     def set(self, window):
         self.current_window = window
+    
+    def start_play(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                self.set(self.game_window)
+    
+    def check_game_quit(self, event):
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            self.set(self.menu_window)
+            return True
+        return False
+    
+    def check_quit(self, event):
+        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+            return True
     
     @property
     def __class__(self):
@@ -164,7 +190,9 @@ class EventReaction:
                     self.night_layer_change()
             
             for event in events:
-                if self.check_quit(event): return
+                if active_window.check_game_quit(event):
+                    events = []
+                    break
                 self.player_move(event)
         
             if any([self.game.player.direction_x, self.game.player.direction_y]) != 0:
@@ -180,8 +208,9 @@ class EventReaction:
                     
         if active_window.__class__ == Menu:
             for event in events:
-                if self.check_quit(event): return  
-
+                self.running = False if active_window.check_quit(event) else True
+                active_window.start_play(event)
+    
     def player_move(self, event):
         if event.type == pygame.KEYDOWN and event.key in [pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d]:
             if event.key == pygame.K_w:
@@ -205,12 +234,6 @@ class EventReaction:
             elif event.key == pygame.K_d:
                 self.game.player.direction_x += -1
                 self.game.player.set_direction(right=True)
-                 
-    def check_quit(self, event):
-        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-            self.running = False
-            return True
-        return False
     
     def increase_time(self):
         self.game.world.time += datetime.timedelta(minutes=1)
@@ -252,18 +275,11 @@ class UI(pygame.sprite.Sprite):
         super().__init__(self.all_ui)
         self.game = game
     
-    def display_inventory(self):
-        pass
-    
-    def get_inventory_center(self, item_num):
-        pass
-    
     def display_clock(self):
         pass
     
     def update(self):
         self.display_clock()
-        self.display_inventory()
         
 
 class Camera:

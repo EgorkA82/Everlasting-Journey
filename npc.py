@@ -103,7 +103,8 @@ class NPC(pygame.sprite.Sprite):
                 pass
             if self.mixer_initialized:
                 if self.__class__ != Player:
-                    self.walking_sound.set_volume(max(0, 1 / (abs(self.game.player.rect.centerx - self.rect.centerx) ** 2 + abs(self.game.player.rect.centery - self.rect.centery) ** 2) ** 0.5) * 50)
+                    NPC_WALKING_VOLUME = 15
+                    self.walking_sound.set_volume(max(0, 1 / (abs(self.game.player.rect.centerx - self.rect.centerx) ** 2 + abs(self.game.player.rect.centery - self.rect.centery) ** 2) ** 0.5) * NPC_WALKING_VOLUME)
                 
                 self.walking_sound.play(maxtime=220)
             self.previous_animation_num = animation_num
