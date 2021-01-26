@@ -11,7 +11,6 @@ class Tiles(pygame.sprite.Sprite):
     def __init__(self, name, board_pos, is_stackable=False, is_placed=True):
         super().__init__(self.all_tiles)
         self.name = name
-        self.weight = 1
         self.is_stackable = is_stackable
         self.is_placed = is_placed
         self.rect = self.image.get_rect()
@@ -42,12 +41,5 @@ class Tiles(pygame.sprite.Sprite):
 class Grass(Tiles):
     image = functions.scale_image(functions.load_image("sprites\\objects\\tiles\\grass.jpg"), size=(Tiles.cfg.get_tile_size(), Tiles.cfg.get_tile_size()))
     
-    def __init__(self, board_pos, is_stackable=False, is_placed=True):
-        super().__init__(__class__.__name__, board_pos, is_stackable, is_placed)
-
-
-class Coin(Tiles):
-    image = functions.scale_image(functions.load_image("sprites\\objects\\tiles\\coin.png", ), size=(Tiles.cfg.get_tile_size() * 0.9, Tiles.cfg.get_tile_size() * 0.9))
-    
-    def __init__(self, board_pos, is_stackable=False, is_placed=True):
-        super().__init__(__class__.__name__, board_pos, is_stackable, is_placed)
+    def __init__(self, board_pos,):
+        super().__init__(__class__.__name__, board_pos)

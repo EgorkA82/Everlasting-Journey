@@ -5,7 +5,7 @@ from objects import *
 clock = pygame.time.Clock()
 game = Game()
 menu = Menu()
-config = game.config 
+config = game.config
 
 pygame.init()
 pygame.display.set_caption(config.get()['GAME_CAPTION'])
@@ -26,4 +26,5 @@ while event_reaction.running:
     pygame.display.flip()
     
     clock.tick(game.framerate)
+
 pygame.quit()

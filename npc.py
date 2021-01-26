@@ -136,13 +136,13 @@ class NPC(pygame.sprite.Sprite):
                     objects.Camera.colliding_sprites.add(self)
                     return True
                 else:
-                    self.rect.centerx -= self.game.sizescale(offset[0]) * self.get_velocity()
+                    self.rect.centerx -= self.game.sizescale(offset[0])
                     objects.Camera.colliding_sprites.add(self)
                     return False
             objects.Camera.colliding_sprites.add(self)
             return True
         else:
-            self.rect.centerx -= self.game.sizescale(offset[0]) * self.get_velocity()
+            self.rect.centerx -= self.game.sizescale(offset[0])
             objects.Camera.colliding_sprites.add(self)
             return False
     

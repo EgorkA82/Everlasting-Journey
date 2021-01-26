@@ -1,8 +1,6 @@
 import datetime
 import json
 import math
-from os import access
-import re
 import pygame
 import random
 
@@ -18,7 +16,7 @@ class Config:
     "size_y": 720,
     "fullscreen": false,
 
-    "framerate": 60\n} '''
+    "framerate": 60}'''
         self.defaults = json.loads(self.text)
         try:
             with open("config.json", "r", encoding="utf-8") as config:
@@ -46,7 +44,7 @@ class Config:
         return math.ceil(self('size_y') / self('size_x'))
 
 
-class Menu:    
+class Menu:
     def display(self, screen):
         config = Game.config
         background = scale_image(load_image("sprites\\menu_background.png"), size=[config.get()["size_x"], config.get()["size_y"]])
@@ -64,9 +62,10 @@ class Game:
     
     def __init__(self):
         self.world = World(self)
-        self.world.create_npc()
         self.player = self.npc.Player("Player", self)
+        self.world.create_coins(10)
         self.camera = Camera(self)
+        self.ui = UI(self)
         
         try:
             pygame.mixer.init()
@@ -86,9 +85,12 @@ class Game:
         return self.config.get()['size_y']
 
     def display(self, screen):
-        screen.fill(pygame.Color('#f2f2f2'))
-        self.camera.draw(screen)
-        screen.blit(self.night_layer, (0, 0))
+        self.screen = screen
+        
+        self.screen.fill(pygame.Color('#f2f2f2'))
+        self.camera.draw(self.screen)
+        self.screen.blit(self.night_layer, (0, 0))
+        self.ui.display_quest(screen)
 
     def timescale(self, value, default_framerate=60):
         return value * (default_framerate / self.framerate)
@@ -105,10 +107,12 @@ class World:
         self.game = game
         self.time = datetime.datetime.now().replace(hour=12, minute = 0, second=0, microsecond=0)
         self.map_size = 3
-        self.tile_size = Config().get_tile_size()
         self.create_board()
+        self.tile_size = Config().get_tile_size()
         self.size = [self.width(), self.height()]
-
+        self.quest = Quest(0, 10, "Соберите монеты")
+        self.create_npc()
+        
     def create_board(self):
         board = []
         for row in range(0, int((self.game.config.get()['size_y'] // self.game.tiles.Tiles.absolute_size + 1) * self.map_size)): # y
@@ -123,8 +127,14 @@ class World:
         # self.game.npc.Male([self.game.get_center()[0], self.game.get_center()[1] * 0.5], self.game)
         pass
     
-    def create_coins(self):
-        self.game.tiles.Coin([self.game.get_center()[0], self.game.get_center()[1] * 0.5])
+    def create_coins(self, num):
+        for _ in range(num):
+            Coin([
+                self.board[0][0].pos[0] + random.randint(self.width() * 0.1, self.width() * 0.9),
+                self.board[0][0].pos[1] + random.randint(self.height() * 0.1, self.height() * 0.9)
+                ],
+                self.game
+                )
     
     def width(self):
         return (len(self.board[0])) * self.game.config.get_tile_size()
@@ -264,8 +274,71 @@ class AnimatedSprite:
         return frames
 
 
-class Objects:
+class Quest:
+    def __init__(self, current_score, goal, description):
+        self.current_score = current_score
+        self.goal = goal
+        self.description = description
+    
+    def increase(self, points=1):
+        if self.current_score < self.goal:
+            self.current_score += points
+    
+    def completed(self):
+        if self.current_score == self.goal:
+            return True
+        return False
+    
+    def get_current_score(self):
+        return self.current_score
+    
+    def get_goal(self):
+        return self.goal
+    
+    def get_description(self):
+        return self.description
+    
+    def get_status(self):
+        return f"{self.description}: {self.current_score}/{self.goal}"
+
+
+class Objects(pygame.sprite.Sprite):
     all_objects = pygame.sprite.Group()
+    
+    def __init__(self, pos, game, is_stackable=False, is_placed=True):
+        super().__init__(self.all_objects)
+        self.is_stackable = is_stackable
+        self.is_placed = is_placed
+        self.game = game
+        self.rect = self.image.get_rect()
+        self.rect.midtop = pos
+        
+    def update(self, camera_pos): # отступ от края с учетом позиции камеры
+        self.rect.x = self.rect.x - camera_pos[0]
+        self.rect.centery = self.rect.centery - camera_pos[1]
+        
+        if self.__class__  == Coin:
+            if pygame.sprite.collide_rect(self.game.player, self):
+                self.game.world.quest.increase()
+                self.kill()
+                print(self.quest.get_status())
+
+    def place(self, pos):
+        self.rect.x = self.rect.center[0] - pos[0]
+        self.rect.centery = self.rect.center[1] - pos[1]
+
+    def get_pos(self):
+        return self.pos
+
+
+class Coin(Objects):
+    image = scale_image(load_image("sprites\\objects\\tiles\\coin.png", ), size=(Game.config.get_tile_size() * 0.5, Game.config.get_tile_size() * 0.5))
+    all_coins = pygame.sprite.Group()
+    
+    def __init__(self, pos, game):
+        super().__init__(pos, game)
+        self.quest = game.world.quest
+        self.all_coins.add(self)
 
 
 class UI(pygame.sprite.Sprite):
@@ -275,11 +348,17 @@ class UI(pygame.sprite.Sprite):
         super().__init__(self.all_ui)
         self.game = game
     
-    def display_clock(self):
-        pass
+    def display_quest(self, screen):
+        font = pygame.font.Font(None, 50)
+        text = font.render(self.game.world.quest.get_status(), True, (255, 172, 55))
+        text_x = self.game.width() - text.get_width() * 1.1
+        text_y = self.game.height() - text.get_height() * 1.1
+        text_w = text.get_width()
+        text_h = text.get_height()
+        screen.blit(text, (text_x, text_y))
     
     def update(self):
-        self.display_clock()
+        self.display_quest()
         
 
 class Camera:
@@ -291,8 +370,9 @@ class Camera:
         pygame.sprite.Sprite.__init__(self.all_sprites)
         self.game = game
         self.player = game.player
-        self.all_sprites.add(self.game.tiles.Tiles.all_tiles,  Objects.all_objects, self.game.npc.NPC.all_npc, self.player.player_sprite, UI.all_ui)
+        self.all_sprites.add(self.game.tiles.Tiles.all_tiles, Objects.all_objects, self.game.npc.NPC.all_npc, self.player.player_sprite, UI.all_ui)
         self.colliding_sprites.add(Objects.all_objects, self.game.npc.NPC.all_npc, self.player.player_sprite)
+        self.colliding_sprites.remove(Coin.all_coins)
         self.pos = [0, 0]
         self.update(self.pos)
         
@@ -301,7 +381,7 @@ class Camera:
     
     def update(self, pos): # обновление позиции относительно камеры
         self.all_sprites.update(pos)
-    
+  
     def set(self, pos):
         self.pos = pos
         self.update(self.pos)
