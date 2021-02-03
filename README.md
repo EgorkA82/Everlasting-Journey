@@ -1,6 +1,6 @@
 # Everlasting Journey - игра с видом от третьего лица
 <p align="center">
-<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/EgorkA82/Everlasting-Journey"><img alt="GitHub tag (latest by date)" src="https://img.shields.io/github/v/tag/EgorkA82/Everlasting-Journey"><a href="https://www.python.org/"><img alt="GitHub release (latest by date)" src="https://img.shields.io/badge/code-python%203.9.0%2B-blue"><a/><img alt="GitHub release (latest by date)" src="https://img.shields.io/github/downloads/EgorkA82/Everlasting-Journey/v0.7/total?label=downloads"><img alt="GitHub" src="https://img.shields.io/github/license/EgorkA82/Everlasting-Journey"/><img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/EgorkA82/Everlasting-Journey">
+<img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/EgorkA82/Everlasting-Journey"><img alt="GitHub tag (latest by date)" src="https://img.shields.io/github/v/tag/EgorkA82/Everlasting-Journey"><a href="https://www.python.org/"><img alt="GitHub release (latest by date)" src="https://img.shields.io/badge/code-python%203.9.0%2B-blue"><a/><img alt="GitHub" src="https://img.shields.io/github/license/EgorkA82/Everlasting-Journey"/><img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/EgorkA82/Everlasting-Journey">
 </p>
 
 <p align="center">
