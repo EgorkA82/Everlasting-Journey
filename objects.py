@@ -106,7 +106,7 @@ class World:
     def __init__(self, game):
         self.game = game
         self.time = datetime.datetime.now().replace(hour=12, minute = 0, second=0, microsecond=0)
-        self.map_size = 3
+        self.map_size = 1
         self.create_board()
         self.tile_size = Config().get_tile_size()
         self.size = [self.width(), self.height()]
@@ -215,6 +215,9 @@ class EventReaction:
                 else:
                     npc.vx, npc.vy = (random.random() - 0.5) * 2, (random.random() - 0.5) * 2
                     npc.move_itaration = random.randrange(50, 250)
+            
+            if self.game.world.quest.goal == self.game.world.quest.current_score:
+                self.running = False
                     
         if active_window.__class__ == Menu:
             for event in events:
@@ -321,7 +324,7 @@ class Objects(pygame.sprite.Sprite):
             if pygame.sprite.collide_rect(self.game.player, self):
                 self.game.world.quest.increase()
                 self.kill()
-                print(self.quest.get_status())
+                print(self.quest.get_status())    
 
     def place(self, pos):
         self.rect.x = self.rect.center[0] - pos[0]
